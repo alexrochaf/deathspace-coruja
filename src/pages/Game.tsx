@@ -16,7 +16,8 @@ import {
   ModalFooter,
   Image,
   SimpleGrid,
-  Divider
+  Divider,
+  Flex
 } from '@chakra-ui/react';
 import { useState } from 'react';
 import { GameBoard } from '../components/GameBoard';
@@ -49,7 +50,7 @@ export const Game: React.FC = () => {
     setIsShipSelectOpen(true);
   };
 
-  const handleShipSelect = async (event: React.MouseEvent<HTMLButtonElement>) => {
+  const handleShipSelect = async () => {
     // Remover o evento do parâmetro e usar o selectedShip do estado
     if (!currentPlayer) {
       toast({
@@ -76,10 +77,6 @@ export const Game: React.FC = () => {
     }
   };
 
-  const onShipSelect = (shipType: ShipType) => {
-    setSelectedShip(shipType);
-  };
-
   // No modal de seleção de nave, atualize os botões para usar onShipSelect:
   const handleJoinRoom = async () => {
     if (!roomId) {
@@ -90,7 +87,45 @@ export const Game: React.FC = () => {
       });
       return;
     }
-    setIsShipSelectOpen(true);
+
+    // Verificar se o usuário está autenticado
+    if (!currentPlayer) {
+      toast({
+        title: "Erro",
+        description: "Você precisa estar autenticado para entrar na sala",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    try {
+      // Verificar se o usuário já está na sala
+      const isInRoom = playerRooms.some(room => room.id === roomId);
+      
+      if (isInRoom) {
+        const room = playerRooms.find(room => room.id === roomId);
+        const ship = room?.ships.find(ship => ship.playerId === currentPlayer.id);
+
+        if (ship) {
+          // Se já está na sala e tem nave, apenas entra
+          await joinRoom(roomId, ship.type);
+          return;
+        }
+      }
+
+      // Se não está na sala ou não tem nave, abre modal para selecionar nave
+      setIsShipSelectOpen(true);
+    } catch (error) {
+      toast({
+        title: "Erro ao verificar sala",
+        description: "Tente novamente mais tarde",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    }
   };
 
   const handleShipSelectForJoin = async () => {
@@ -207,7 +242,7 @@ export const Game: React.FC = () => {
           {playerRooms.length > 0 && (
             <Box w="100%" p={6} borderWidth={1} borderRadius="lg">
               <VStack spacing={4} align="stretch">
-                <Heading size="md">Suas Salas</Heading>
+                <Heading size="md">Participando</Heading>
                 {playerRooms.map((room) => (
                   <Flex
                     key={room.id}
@@ -226,7 +261,7 @@ export const Game: React.FC = () => {
                     <Button
                       colorScheme="blue"
                       size="sm"
-                      onClick={() => room.id && joinRoom(room.id)}
+                      onClick={() => room.id && joinRoom(room.id, room.ships.find(ship => ship.playerId === currentPlayer?.id)?.type || 'fighter')}
                       isLoading={loading}
                     >
                       Entrar
@@ -239,7 +274,7 @@ export const Game: React.FC = () => {
 
           <Box w="100%" p={6} borderWidth={1} borderRadius="lg">
             <VStack spacing={4}>
-              <Heading size="md">Criar Sala</Heading>
+              <Heading size="md">Começar uma nova batalha</Heading>
               <Input
                 placeholder="Nome da sala"
                 value={roomName}
@@ -251,14 +286,14 @@ export const Game: React.FC = () => {
                 isLoading={loading}
                 w="100%"
               >
-                Criar Sala
+                CRIAR
               </Button>
             </VStack>
           </Box>
 
           <Box w="100%" p={6} borderWidth={1} borderRadius="lg">
             <VStack spacing={4}>
-              <Heading size="md">Join Room</Heading>
+              <Heading size="md">Entrar na batalha</Heading>
               <Input
                 placeholder="Room ID"
                 value={roomId}
@@ -270,7 +305,7 @@ export const Game: React.FC = () => {
                 isLoading={loading}
                 w="100%"
               >
-                Join Room
+                ENTRAR
               </Button>
             </VStack>
           </Box>
@@ -323,63 +358,6 @@ export const Game: React.FC = () => {
     );
   }
 
-  const renderHUD = () => {
-    if (!selectedShipInfo) return null;
-
-    return (
-      <Box
-        position="fixed"
-        bottom="20px"
-        right="20px"
-        bg="gray.800"
-        color="white"
-        p={4}
-        borderRadius="md"
-        boxShadow="lg"
-      >
-        <VStack spacing={3} align="stretch">
-          <Heading size="md">Informações da Nave</Heading>
-          <Text>Tipo: {selectedShipInfo.type}</Text>
-          <Text>Pontos de Ação: {selectedShipInfo.actionPoints}</Text>
-          <Text>Vida: {selectedShipInfo.health}</Text>
-          
-          <Heading size="sm" mt={2}>Ações</Heading>
-          <SimpleGrid columns={2} spacing={2}>
-            <Button
-              colorScheme={selectedAction === 'MOVE' ? 'blue' : 'gray'}
-              onClick={() => setSelectedAction('MOVE')}
-              isDisabled={selectedShipInfo.actionPoints <= 0}
-            >
-              Mover
-            </Button>
-            <Button
-              colorScheme={selectedAction === 'ATTACK' ? 'red' : 'gray'}
-              onClick={() => setSelectedAction('ATTACK')}
-              isDisabled={selectedShipInfo.actionPoints <= 0}
-            >
-              Atacar
-            </Button>
-            <Button
-              colorScheme={selectedAction === 'DONATE' ? 'green' : 'gray'}
-              onClick={() => setSelectedAction('DONATE')}
-              isDisabled={selectedShipInfo.actionPoints <= 0}
-            >
-              Doar AP
-            </Button>
-            <Button
-              colorScheme="gray"
-              onClick={() => setSelectedAction(null)}
-              isDisabled={!selectedAction}
-            >
-              Cancelar Ação
-            </Button>
-          </SimpleGrid>
-        </VStack>
-      </Box>
-    );
-  };
-
-  // Adicione este return para quando houver uma sala atual
   return (
     <Container maxW="container.xl" py={8}>
       <Grid templateColumns="250px 1fr 250px" gap={4} w="100%">
@@ -450,6 +428,7 @@ export const Game: React.FC = () => {
                     Doar AP
                   </Button>
                   <Button
+                    w="100%"
                     colorScheme="gray"
                     onClick={() => setSelectedAction(null)}
                     isDisabled={!selectedAction}

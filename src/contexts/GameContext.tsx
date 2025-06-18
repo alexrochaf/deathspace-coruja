@@ -10,7 +10,7 @@ interface GameContextType {
   playerRooms: GameRoom[];
   isMyTurn: boolean;
   createRoom: (name: string, shipType: ShipType, actionTimeWindows: ActionTimeWindow[]) => Promise<void>;
-  joinRoom: (roomId: string) => Promise<void>;
+  joinRoom: (roomId: string, shipType: ShipType) => Promise<void>;
   performAction: (action: GameAction) => Promise<void>;
   loading: boolean;
   error: string | null;
@@ -66,6 +66,32 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
 
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (currentPlayer) {
+      const unsubscribeRooms = onSnapshot(
+        collection(db, 'rooms'),
+        (snapshot) => {
+          const rooms = snapshot.docs
+            .map(doc => ({
+              ...doc.data(),
+              id: doc.id,
+              createdAt: doc.data().createdAt,
+              ships: doc.data().ships || []
+            })) as GameRoom[];
+          
+          // Filtrar apenas as salas onde o jogador está participando
+          const playerRooms = rooms.filter(room => 
+            room.players.includes(currentPlayer.id)
+          );
+          
+          setPlayerRooms(playerRooms);
+        }
+      );
+
+      return () => unsubscribeRooms();
+    }
+  }, [currentPlayer]);
 
   const timeWindows = [
     { start: "00:00", end: "23:59" }
@@ -400,6 +426,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
 
     return () => unsubscribe();
   }, [currentRoom, currentRoom?.id]);
+
 
   const isMyTurn = currentRoom?.currentTurn === currentPlayer?.id;
 
