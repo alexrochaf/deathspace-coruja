@@ -1,9 +1,9 @@
-name: Deploy no GitHub Pages
+name: Deploy de Desenvolvimento no GitHub Pages
 
 on:
   push:
     branches:
-      - main
+      - development
 
 jobs:
   build-and-deploy:
