@@ -3,6 +3,8 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { db, auth } from '../config/firebase';
 import { collection, doc, getDoc, onSnapshot, addDoc, updateDoc, serverTimestamp, arrayUnion } from 'firebase/firestore';
 import type { GameRoom, Player, GameAction, Ship, ShipType, Position, Debris, DebrisType, ActionTimeWindow } from '../types/game';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 interface GameContextType {
   currentRoom: GameRoom | null;
@@ -104,12 +106,12 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
 
   const createRoom = async (name: string, shipType: ShipType, actionTimeWindows: ActionTimeWindow[]) => {
     if (!currentPlayer) {
-      setError("Você precisa estar autenticado para criar uma sala");
+      toast.error("Você precisa estar autenticado para criar uma sala");
       return;
     }
 
     if (!auth.currentUser) {
-      setError("Aguarde a inicialização da autenticação");
+      toast.error("Aguarde a inicialização da autenticação");
       return;
     }
 
@@ -174,7 +176,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         actionTimeWindows // Adicionar os horários de ações aqui também
       });
     } catch (error) {
-      setError(error instanceof Error ? error.message : "Erro ao criar sala");
+      toast.error(error instanceof Error ? error.message : "Erro ao criar sala");
       console.error("Erro ao criar sala:", error);
     } finally {
       setLoading(false);
@@ -261,7 +263,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       return () => unsubscribe();
     } catch (err) {
       console.error('Erro ao entrar na sala:', err);
-      setError(err instanceof Error ? err.message : 'Failed to join room');
+      toast.error(err instanceof Error ? err.message : 'Falha ao entrar na sala');
     } finally {
       setLoading(false);
     }
@@ -411,7 +413,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       });
       
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Falha ao executar ação');
+      toast.error(err instanceof Error ? err.message : 'Erro ao executar ação');
     } finally {
       setLoading(false);
     }
@@ -451,6 +453,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       }}
     >
       {children}
+      <ToastContainer position="bottom-center" autoClose={5000} />
     </GameContext.Provider>
   );
 };

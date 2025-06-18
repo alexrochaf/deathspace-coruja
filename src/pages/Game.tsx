@@ -17,8 +17,10 @@ import {
   Image,
   SimpleGrid,
   Divider,
-  Flex
-} from '@chakra-ui/react';
+  Flex,
+  Avatar,
+  HStack,
+} from "@chakra-ui/react";
 import { useState } from 'react';
 import { GameBoard } from '../components/GameBoard';
 import { useGame } from '../contexts/GameContext';
@@ -252,8 +254,24 @@ export const Game: React.FC = () => {
     }
   };
 
-    if (!currentRoom) {
-      return (
+  return (
+    <Box>
+      {/* Barra de Menu */}
+      <Box bg="gray.800" py={3} px={6} color="white" boxShadow="md">
+        <Container maxW="container.xl">
+          <Flex justify="space-between" align="center">
+            <Heading size="md">Death Space</Heading>
+            <HStack spacing={4}>
+              <Avatar size="sm" name={currentPlayer?.name} src={currentPlayer?.photoURL || undefined} />
+              <Text>{currentPlayer?.name}</Text>
+              <Button size="sm" colorScheme="red" onClick={handleLogout}>
+                Sair
+              </Button>
+            </HStack>
+          </Flex>
+        </Container>
+      </Box>
+      {!currentRoom ? (
         <Container maxW="container.md" py={10}>
           <VStack spacing={8}>
             <Heading>Death Space</Heading>
@@ -374,11 +392,8 @@ export const Game: React.FC = () => {
             </Modal>
           </VStack>
         </Container>
-      );
-    }
-  
-    return (
-      <Container maxW="container.xl" py={8}>
+    ) : (
+        <Container maxW="container.xl" py={8}>
         <Grid templateColumns="250px 1fr 250px" gap={4} w="100%">
           {/* Painel Esquerdo - Informações do Jogador */}
           <Box bg="gray.800" p={4} borderRadius="md" color="white">
@@ -463,6 +478,8 @@ export const Game: React.FC = () => {
           </Box>
         </Grid>
       </Container>
+      )};
+      </Box>
     );
   
   // Layout para Celular (Falta ajustar)
