@@ -9,7 +9,12 @@ interface GameContextType {
   currentPlayer: Player | null;
   playerRooms: GameRoom[];
   isMyTurn: boolean;
-  createRoom: (name: string, shipType: ShipType, actionTimeWindows: ActionTimeWindow[]) => Promise<void>;
+  createRoom: (
+    name: string,
+    shipType: ShipType,
+    actionTimeWindows: ActionTimeWindow[]
+  ) => Promise<void>;
+  setCurrentRoom: (room: GameRoom | null) => void;
   joinRoom: (roomId: string, shipType: ShipType) => Promise<void>;
   performAction: (action: GameAction) => Promise<void>;
   loading: boolean;
@@ -438,6 +443,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         playerRooms,
         isMyTurn,
         createRoom,
+        setCurrentRoom,
         joinRoom,
         performAction,
         loading,

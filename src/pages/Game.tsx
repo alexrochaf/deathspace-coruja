@@ -23,13 +23,23 @@ import { useState } from 'react';
 import { GameBoard } from '../components/GameBoard';
 import { useGame } from '../contexts/GameContext';
 import type { GameAction, Position, ShipType, Ship } from '../types/game';
+import { auth } from '../config/firebase';
 
 // Ship assets
 import fighterSvg from '../assets/spaceships/fighter.svg';
 import cruiserSvg from '../assets/spaceships/cruiser.svg';
 
 export const Game: React.FC = () => {
-  const { currentRoom, currentPlayer, playerRooms, createRoom, joinRoom, performAction, loading } = useGame();
+  const {
+    currentRoom,
+    currentPlayer,
+    playerRooms,
+    createRoom,
+    setCurrentRoom,
+    joinRoom,
+    performAction,
+    loading,
+  } = useGame();
   const [roomName, setRoomName] = useState('');
   const [roomId, setRoomId] = useState('');
   const [selectedAction, setSelectedAction] = useState<'MOVE' | 'ATTACK' | 'DONATE' | null>(null);
@@ -119,6 +129,7 @@ export const Game: React.FC = () => {
       // Se não está na sala ou não tem nave, abre modal para selecionar nave
       setIsShipSelectOpen(true);
     } catch (error) {
+      console.error(error);
       toast({
         title: "Erro ao verificar sala",
         description: "Tente novamente mais tarde",
@@ -145,6 +156,7 @@ export const Game: React.FC = () => {
       await joinRoom(roomId, selectedShip);
       setIsShipSelectOpen(false);
     } catch (error) {
+      console.error(error);
       toast({
         title: "Erro ao entrar na sala",
         description: "Tente novamente mais tarde",
@@ -208,6 +220,7 @@ export const Game: React.FC = () => {
         duration: 2000,
       });
     } catch (error) {
+      console.error(error);
       toast({
         title: "Erro ao sair da sala",
         status: "error",
@@ -218,14 +231,19 @@ export const Game: React.FC = () => {
 
   const handleLogout = async () => {
     try {
-      // Add your logout logic here
-      // Example: await auth.signOut();
+      // Clear current room and player data
+      setCurrentRoom(null);
+      setSelectedShipInfo(null);
+      setSelectedAction(null);
+      await auth.signOut();
+      window.location.href = "/";
       toast({
         title: "Logout realizado",
         status: "success",
         duration: 2000,
       });
     } catch (error) {
+      console.error(error);
       toast({
         title: "Erro ao fazer logout",
         status: "error",
