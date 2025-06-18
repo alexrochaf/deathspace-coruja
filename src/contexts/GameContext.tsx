@@ -316,9 +316,10 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
           if (!action.target) throw new Error('Posição alvo não especificada');
           const targetPos = action.target as Position;
           
-          // Verificar se o movimento é válido (distância de 1 célula)
-          const distance = Math.abs(targetPos.x - ship.position.x) + Math.abs(targetPos.y - ship.position.y);
-          if (distance !== 1) throw new Error('Movimento inválido: deve ser para uma célula adjacente');
+          // Check if movement is valid (can move in any direction)
+          const xDiff = Math.abs(targetPos.x - ship.position.x);
+          const yDiff = Math.abs(targetPos.y - ship.position.y);
+          if (xDiff > 1 || yDiff > 1) throw new Error('Invalid movement: must move to an adjacent cell');
           
           // Verificar se a posição está ocupada
           const isOccupied = roomData.ships.some(s => s.id !== ship.id && s.position.x === targetPos.x && s.position.y === targetPos.y) ||

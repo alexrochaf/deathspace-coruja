@@ -1,4 +1,4 @@
-import { Box, Grid, GridItem } from "@chakra-ui/react";
+import { Box, Grid, GridItem, Tooltip } from "@chakra-ui/react";
 import { useGame } from "../contexts/GameContext";
 import type { Position, Ship, Debris } from "../types/game";
 import { useState } from "react";
@@ -13,12 +13,14 @@ interface GameBoardProps {
   onCellClick: (position: Position) => void;
   onShipSelect?: (ship: Ship) => void;
   selectedAction?: "MOVE" | "ATTACK" | "DONATE" | null;
+  getShipInfo: (ship: Ship) => string;
 }
 
 export const GameBoard = ({
   onCellClick,
   onShipSelect,
   selectedAction,
+  getShipInfo
 }: GameBoardProps) => {
   const { currentRoom, currentPlayer } = useGame();
   const [selectedShip, setSelectedShip] = useState<Ship | null>(null);
@@ -95,14 +97,24 @@ export const GameBoard = ({
                 _hover={{ bg: "gray.200" }}
               >
                 {ship && (
-                  <Box
-                    as="img"
-                    src={ship.type === "fighter" ? fighterSvg : cruiserSvg}
-                    alt={ship.type}
-                    w="90%"
-                    h="90%"
-                    opacity={ship.actionPoints > 0 ? 1 : 0.5}
-                  />
+                  <Tooltip
+                    label={getShipInfo(ship) ?? "Nave"}
+                    hasArrow
+                    placement="top"
+                    bg="gray.700"
+                    color="white"
+                    p={2}
+                    borderRadius="md"
+                  >
+                    <Box
+                      as="img"
+                      src={ship.type === "fighter" ? fighterSvg : cruiserSvg}
+                      alt={ship.type}
+                      w="90%"
+                      h="90%"
+                      opacity={ship.actionPoints > 0 ? 1 : 0.5}
+                    />
+                  </Tooltip>
                 )}
                 {debris && (
                   <Box

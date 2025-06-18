@@ -202,7 +202,7 @@ export const Game: React.FC = () => {
   const handleShipClick = (ship: Ship) => {
     if (ship.playerId !== currentPlayer?.id) {
       toast({
-        title: "Erro",
+        title: "Aviso",
         description: "Você só pode selecionar suas próprias naves",
         status: "warning",
         duration: 2000,
@@ -262,7 +262,11 @@ export const Game: React.FC = () => {
           <Flex justify="space-between" align="center">
             <Heading size="md">Death Space</Heading>
             <HStack spacing={4}>
-              <Avatar size="sm" name={currentPlayer?.name} src={currentPlayer?.photoURL || undefined} />
+              <Avatar
+                size="sm"
+                name={currentPlayer?.name}
+                src={currentPlayer?.photoURL || undefined}
+              />
               <Text>{currentPlayer?.name}</Text>
               <Button size="sm" colorScheme="red" onClick={handleLogout}>
                 Sair
@@ -298,7 +302,15 @@ export const Game: React.FC = () => {
                       <Button
                         colorScheme="blue"
                         size="sm"
-                        onClick={() => room.id && joinRoom(room.id, room.ships.find(ship => ship.playerId === currentPlayer?.id)?.type || 'fighter')}
+                        onClick={() =>
+                          room.id &&
+                          joinRoom(
+                            room.id,
+                            room.ships.find(
+                              (ship) => ship.playerId === currentPlayer?.id
+                            )?.type || "fighter"
+                          )
+                        }
                         isLoading={loading}
                       >
                         Entrar
@@ -347,7 +359,10 @@ export const Game: React.FC = () => {
               </VStack>
             </Box>
 
-            <Modal isOpen={isShipSelectOpen} onClose={() => setIsShipSelectOpen(false)}>
+            <Modal
+              isOpen={isShipSelectOpen}
+              onClose={() => setIsShipSelectOpen(false)}
+            >
               <ModalOverlay />
               <ModalContent>
                 <ModalHeader>Escolha sua Nave</ModalHeader>
@@ -357,9 +372,11 @@ export const Game: React.FC = () => {
                       p={4}
                       borderWidth={2}
                       borderRadius="lg"
-                      borderColor={selectedShip === 'fighter' ? 'blue.500' : 'gray.200'}
+                      borderColor={
+                        selectedShip === "fighter" ? "blue.500" : "gray.200"
+                      }
                       cursor="pointer"
-                      onClick={() => setSelectedShip('fighter')}
+                      onClick={() => setSelectedShip("fighter")}
                     >
                       <VStack>
                         <Image src={fighterSvg} alt="Fighter" boxSize="100px" />
@@ -371,9 +388,11 @@ export const Game: React.FC = () => {
                       p={4}
                       borderWidth={2}
                       borderRadius="lg"
-                      borderColor={selectedShip === 'cruiser' ? 'blue.500' : 'gray.200'}
+                      borderColor={
+                        selectedShip === "cruiser" ? "blue.500" : "gray.200"
+                      }
                       cursor="pointer"
-                      onClick={() => setSelectedShip('cruiser')}
+                      onClick={() => setSelectedShip("cruiser")}
                     >
                       <VStack>
                         <Image src={cruiserSvg} alt="Cruiser" boxSize="100px" />
@@ -384,7 +403,12 @@ export const Game: React.FC = () => {
                   </SimpleGrid>
                 </ModalBody>
                 <ModalFooter>
-                  <Button colorScheme="blue" onClick={roomId ? handleShipSelectForJoin : handleShipSelect}>
+                  <Button
+                    colorScheme="blue"
+                    onClick={
+                      roomId ? handleShipSelectForJoin : handleShipSelect
+                    }
+                  >
                     Confirmar Seleção
                   </Button>
                 </ModalFooter>
@@ -392,95 +416,116 @@ export const Game: React.FC = () => {
             </Modal>
           </VStack>
         </Container>
-    ) : (
+      ) : (
         <Container maxW="container.xl" py={8}>
-        <Grid templateColumns="250px 1fr 250px" gap={4} w="100%">
-          {/* Painel Esquerdo - Informações do Jogador */}
-          <Box bg="gray.800" p={4} borderRadius="md" color="white">
-            <VStack spacing={4} align="stretch">
-              <Heading size="md">Jogador</Heading>
-              <Text>Nome: {currentPlayer?.name}</Text>
-              <Text>Sala: {currentRoom.name}</Text>
-              <Text>ID da Sala: {currentRoom.id}</Text>
-              <Divider />
-              <Button colorScheme="red" size="sm" onClick={handleLeaveRoom}>
-                Sair da Sala
-              </Button>
-              <Button colorScheme="gray" size="sm" onClick={handleLogout}>
-                Deslogar
-              </Button>
-            </VStack>
-          </Box>
+          <Grid templateColumns="250px 1fr 250px" gap={4} w="100%">
+            {/* Painel Esquerdo - Informações do Jogador */}
+            <Box bg="gray.800" p={4} borderRadius="md" color="white">
+              <VStack spacing={4} align="stretch">
+                <Heading size="md">Jogador</Heading>
+                <Text>Nome: {currentPlayer?.name}</Text>
+                <Text>Sala: {currentRoom.name}</Text>
+                <Text>ID da Sala: {currentRoom.id}</Text>
+                <Divider />
+                <Button colorScheme="red" size="sm" onClick={handleLeaveRoom}>
+                  Sair da Sala
+                </Button>
+                <Button colorScheme="gray" size="sm" onClick={handleLogout}>
+                  Deslogar
+                </Button>
+              </VStack>
+            </Box>
 
-          {/* Tabuleiro Central */}
-          <VStack spacing={4}>
-            <GameBoard
-              onCellClick={handleCellClick}
-              onShipSelect={handleShipClick}
-              selectedAction={selectedAction}
-            />
-          </VStack>
-
-          {/* Painel Direito - Informações da Nave e Ações */}
-          <Box bg="gray.800" p={4} borderRadius="md" color="white">
-            <VStack spacing={4} align="stretch">
-              <Heading size="md">Controles</Heading>
-              {selectedShipInfo ? (
-                <>
-                  <Box>
-                    <Heading size="sm">Nave Selecionada</Heading>
-                    <Text>Tipo: {selectedShipInfo.type}</Text>
-                    <Text>Pontos de Ação: {selectedShipInfo.actionPoints}</Text>
-                    <Text>Vida: {selectedShipInfo.health}</Text>
-                  </Box>
-                  <Divider />
-                  <VStack spacing={2}>
-                    <Heading size="sm">Ações</Heading>
-                    <Button
-                      w="100%"
-                      colorScheme={selectedAction === 'MOVE' ? 'blue' : 'gray'}
-                      onClick={() => setSelectedAction('MOVE')}
-                      isDisabled={selectedShipInfo.actionPoints <= 0}
-                      isLoading={loading}
-                    >
-                      Mover
-                    </Button>
-                    <Button
-                      w="100%"
-                      colorScheme={selectedAction === 'ATTACK' ? 'red' : 'gray'}
-                      onClick={() => setSelectedAction('ATTACK')}
-                      isDisabled={selectedShipInfo.actionPoints <= 0}
-                    >
-                      Atacar
-                    </Button>
-                    <Button
-                      w="100%"
-                      colorScheme={selectedAction === 'DONATE' ? 'green' : 'gray'}
-                      onClick={() => setSelectedAction('DONATE')}
-                      isDisabled={selectedShipInfo.actionPoints <= 0}
-                    >
-                      Doar AP
-                    </Button>
-                    <Button
-                      w="100%"
-                      colorScheme="gray"
-                      onClick={() => setSelectedAction(null)}
-                      isDisabled={!selectedAction}
-                    >
-                      Cancelar Ação
-                    </Button>
-                  </VStack>
-                </>
-              ) : (
-                <Text>Selecione uma nave para ver as ações disponíveis</Text>
-              )}
+            {/* Tabuleiro Central */}
+            <VStack spacing={4}>
+              <GameBoard
+                onCellClick={handleCellClick}
+                onShipSelect={handleShipClick}
+                selectedAction={selectedAction}
+                getShipInfo={(ship) => `Vida: ${ship.health}\n
+                                        Pontos de Ação: ${ship.actionPoints}\n
+                                        Tipo: ${
+                                          ship.type === "fighter"
+                                            ? "Caça"
+                                            : "Cruzador"
+                                        }
+                                        Dono: ${
+                                          currentRoom?.players
+                                            .find((p) => p === ship.playerId)
+                                            ?.slice(0, 8) || "Desconhecido"
+                                        }`}
+              />
             </VStack>
-          </Box>
-        </Grid>
-      </Container>
-      )};
-      </Box>
-    );
+
+            {/* Painel Direito - Informações da Nave e Ações */}
+            <Box bg="gray.800" p={4} borderRadius="md" color="white">
+              <VStack spacing={4} align="stretch">
+                <Heading size="md">Controles</Heading>
+                {selectedShipInfo ? (
+                  <>
+                    <Box>
+                      <Heading size="sm">Nave Selecionada</Heading>
+                      <Text>Tipo: {selectedShipInfo.type}</Text>
+                      <Text>
+                        Pontos de Ação: {selectedShipInfo.actionPoints}
+                      </Text>
+                      <Text>Vida: {selectedShipInfo.health}</Text>
+                    </Box>
+                    <Divider />
+                    <VStack spacing={2}>
+                      <Heading size="sm">Ações</Heading>
+                      <Button
+                        w="100%"
+                        colorScheme={
+                          selectedAction === "MOVE" ? "blue" : "gray"
+                        }
+                        onClick={() => setSelectedAction("MOVE")}
+                        isDisabled={selectedShipInfo.actionPoints <= 0}
+                        isLoading={loading}
+                      >
+                        Mover
+                      </Button>
+                      <Button
+                        w="100%"
+                        colorScheme={
+                          selectedAction === "ATTACK" ? "red" : "gray"
+                        }
+                        onClick={() => setSelectedAction("ATTACK")}
+                        isDisabled={selectedShipInfo.actionPoints <= 0}
+                      >
+                        Atacar
+                      </Button>
+                      <Button
+                        w="100%"
+                        colorScheme={
+                          selectedAction === "DONATE" ? "green" : "gray"
+                        }
+                        onClick={() => setSelectedAction("DONATE")}
+                        isDisabled={selectedShipInfo.actionPoints <= 0}
+                      >
+                        Doar AP
+                      </Button>
+                      <Button
+                        w="100%"
+                        colorScheme="gray"
+                        onClick={() => setSelectedAction(null)}
+                        isDisabled={!selectedAction}
+                      >
+                        Cancelar Ação
+                      </Button>
+                    </VStack>
+                  </>
+                ) : (
+                  <Text>Selecione uma nave para ver as ações disponíveis</Text>
+                )}
+              </VStack>
+            </Box>
+          </Grid>
+        </Container>
+      )}
+      ;
+    </Box>
+  );
   
   // Layout para Celular (Falta ajustar)
   // return (
