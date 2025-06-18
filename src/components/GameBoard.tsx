@@ -1,35 +1,42 @@
-import { Box, Grid, GridItem, useToast } from '@chakra-ui/react';
-import { useGame } from '../contexts/GameContext';
-import type { Position, Ship, Debris } from '../types/game';
-import { useState } from 'react';
+import { Box, Grid, GridItem } from "@chakra-ui/react";
+import { useGame } from "../contexts/GameContext";
+import type { Position, Ship, Debris } from "../types/game";
+import { useState } from "react";
 
 // Importe os SVGs dos detritos e naves
-import asteroidSvg from '../assets/debris/asteroid.svg';
-import satelliteSvg from '../assets/debris/satellite.svg';
-import fighterSvg from '../assets/spaceships/fighter.svg';
-import cruiserSvg from '../assets/spaceships/cruiser.svg';
+import asteroidSvg from "../assets/debris/asteroid.svg";
+import satelliteSvg from "../assets/debris/satellite.svg";
+import fighterSvg from "../assets/spaceships/fighter.svg";
+import cruiserSvg from "../assets/spaceships/cruiser.svg";
 
 interface GameBoardProps {
   onCellClick: (position: Position) => void;
   onShipSelect?: (ship: Ship) => void;
-  selectedAction?: 'MOVE' | 'ATTACK' | 'DONATE' | null;
+  selectedAction?: "MOVE" | "ATTACK" | "DONATE" | null;
 }
 
-export const GameBoard = ({ onCellClick, onShipSelect, selectedAction }: GameBoardProps) => {
+export const GameBoard = ({
+  onCellClick,
+  onShipSelect,
+  selectedAction,
+}: GameBoardProps) => {
   const { currentRoom, currentPlayer } = useGame();
   const [selectedShip, setSelectedShip] = useState<Ship | null>(null);
-  const toast = useToast();
 
   if (!currentRoom) return null;
 
   const { gridSize, ships, debris } = currentRoom;
 
   const getShipAtPosition = (pos: Position): Ship | undefined => {
-    return ships?.find(ship => ship.position.x === pos.x && ship.position.y === pos.y);
+    return ships?.find(
+      (ship) => ship.position.x === pos.x && ship.position.y === pos.y
+    );
   };
 
   const getDebrisAtPosition = (pos: Position): Debris | undefined => {
-    return debris?.find(d => d.position.x === pos.x && d.position.y === pos.y);
+    return debris?.find(
+      (d) => d.position.x === pos.x && d.position.y === pos.y
+    );
   };
 
   const handleCellClick = (position: Position) => {
@@ -52,11 +59,18 @@ export const GameBoard = ({ onCellClick, onShipSelect, selectedAction }: GameBoa
   };
 
   return (
-    <Box w="100%" maxW="600px" aspectRatio="1" border="2px" borderColor="gray.200" p={2}>
+    <Box
+      w="100%"
+      maxW={["100%", "100%", "600px"]}
+      aspectRatio="1"
+      border="2px"
+      borderColor="gray.200"
+      p={[1, 2]}
+    >
       <Grid
         templateColumns={`repeat(${gridSize.width}, 1fr)`}
         templateRows={`repeat(${gridSize.height}, 1fr)`}
-        gap={1}
+        gap={[0.5, 1]}
         h="100%"
       >
         {Array.from({ length: gridSize.height }).map((_, y) =>
@@ -69,7 +83,7 @@ export const GameBoard = ({ onCellClick, onShipSelect, selectedAction }: GameBoa
             return (
               <GridItem
                 key={`${x}-${y}`}
-                bg={isSelected ? 'blue.200' : 'gray.100'}
+                bg={isSelected ? "blue.200" : "gray.100"}
                 border="1px"
                 borderColor="gray.300"
                 cursor="pointer"
@@ -78,25 +92,27 @@ export const GameBoard = ({ onCellClick, onShipSelect, selectedAction }: GameBoa
                 justifyContent="center"
                 onClick={() => handleCellClick(position)}
                 position="relative"
-                _hover={{ bg: 'gray.200' }}
+                _hover={{ bg: "gray.200" }}
               >
                 {ship && (
                   <Box
                     as="img"
-                    src={ship.type === 'fighter' ? fighterSvg : cruiserSvg}
+                    src={ship.type === "fighter" ? fighterSvg : cruiserSvg}
                     alt={ship.type}
-                    w="80%"
-                    h="80%"
+                    w="90%"
+                    h="90%"
                     opacity={ship.actionPoints > 0 ? 1 : 0.5}
                   />
                 )}
                 {debris && (
                   <Box
                     as="img"
-                    src={debris.type === 'asteroid' ? asteroidSvg : satelliteSvg}
+                    src={
+                      debris.type === "asteroid" ? asteroidSvg : satelliteSvg
+                    }
                     alt={debris.type}
-                    w="80%"
-                    h="80%"
+                    w="90%"
+                    h="90%"
                     opacity={0.8}
                   />
                 )}
