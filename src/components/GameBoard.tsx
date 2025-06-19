@@ -1,7 +1,7 @@
 import { Box, Grid, GridItem, Tooltip } from "@chakra-ui/react";
 import { useGame } from "../contexts/GameContext";
 import type { Position, Ship, Debris } from "../types/game";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 // Importe os SVGs dos detritos e naves
 import asteroidSvg from "../assets/debris/asteroid.svg";
@@ -20,12 +20,24 @@ export const GameBoard = ({
   onCellClick,
   onShipSelect,
   selectedAction,
-  getShipInfo
+  getShipInfo,
 }: GameBoardProps) => {
   const { currentRoom, currentPlayer } = useGame();
   const [selectedShip, setSelectedShip] = useState<Ship | null>(null);
 
-  if (!currentRoom) return null;
+  useEffect(() => {
+    if (selectedShip) {
+      const updatedShip = currentRoom?.ships?.find(
+        (s) => s.id === selectedShip.id
+      );
+      if (updatedShip) {
+        setSelectedShip(updatedShip);
+        onShipSelect?.(updatedShip);
+      }
+    }
+  }, [currentRoom?.ships, selectedShip, onShipSelect]);
+
+  if (!currentRoom || !currentRoom.ships || !currentRoom.debris) return null;
 
   const { gridSize, ships, debris } = currentRoom;
 
@@ -50,9 +62,7 @@ export const GameBoard = ({
     }
 
     if (shipAtPosition) {
-      if (shipAtPosition.playerId === currentPlayer?.id) {
-        setSelectedShip(shipAtPosition);
-      }
+      setSelectedShip(shipAtPosition);
       onShipSelect?.(shipAtPosition);
       return;
     }
@@ -87,7 +97,24 @@ export const GameBoard = ({
                 key={`${x}-${y}`}
                 bg={isSelected ? "blue.200" : "gray.100"}
                 border="1px"
-                borderColor="gray.300"
+                borderColor={
+                  selectedShip &&
+                  Math.abs(x - selectedShip.position.x) +
+                    Math.abs(y - selectedShip.position.y) <=
+                    selectedShip.reach
+                    ? selectedShip.playerId === currentPlayer?.id
+                      ? "blue.500"
+                      : "red.500"
+                    : "gray.300"
+                }
+                borderWidth={
+                  selectedShip &&
+                  Math.abs(x - selectedShip.position.x) +
+                    Math.abs(y - selectedShip.position.y) <=
+                    selectedShip.reach
+                    ? "2px"
+                    : "1px"
+                }
                 cursor="pointer"
                 display="flex"
                 alignItems="center"

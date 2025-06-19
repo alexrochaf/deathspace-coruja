@@ -200,15 +200,6 @@ export const Game: React.FC = () => {
   };
 
   const handleShipClick = (ship: Ship) => {
-    if (ship.playerId !== currentPlayer?.id) {
-      toast({
-        title: "Aviso",
-        description: "Você só pode selecionar suas próprias naves",
-        status: "warning",
-        duration: 2000,
-      });
-      return;
-    }
     setSelectedShipInfo(ship);
   };
 

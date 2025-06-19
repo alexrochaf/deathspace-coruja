@@ -4,6 +4,9 @@ export interface Player {
   actionPoints: number;
   ships: Ship[];
   lastPointGain: Date;
+  isAlive: boolean;
+  votes: number;
+  votedFor?: string;
 }
 
 export type ShipType = 'fighter' | 'cruiser';
@@ -45,6 +48,8 @@ export interface ActionTimeWindow {
   end: string;
 }
 
+import { Timestamp } from 'firebase/firestore';
+
 export interface GameRoom {
   id?: string;
   name: string;
@@ -59,4 +64,14 @@ export interface GameRoom {
   debris: Debris[];
   ships: Ship[];
   actionTimeWindows: ActionTimeWindow[];
+  lastPointDistribution?: Timestamp;
+  council: {
+    members: string[];
+    votes: {
+      playerId: string;
+      votedFor: string;
+      voteWeight: number;
+    }[];
+    lastVoteTime: Date;
+  };
 }

@@ -19,6 +19,7 @@ interface GameContextType {
   setCurrentRoom: (room: GameRoom | null) => void;
   joinRoom: (roomId: string, shipType: ShipType) => Promise<void>;
   performAction: (action: GameAction) => Promise<void>;
+  voteInCouncil: (targetPlayerId: string) => Promise<void>;
   loading: boolean;
   error: string | null;
 }
@@ -50,6 +51,88 @@ const createDebris = (type: DebrisType, position: Position): Debris => ({
 });
 
 export const GameProvider = ({ children }: { children: ReactNode }) => {
+  const checkGameEnd = async (roomData: GameRoom) => {
+    const alivePlayers = roomData.players.filter(playerId => 
+      roomData.ships.some(ship => ship.playerId === playerId && ship.health > 0)
+    );
+
+    // Verificar condição de 4 jogadores restantes
+    if (alivePlayers.length <= 4) {
+      await updateDoc(doc(db, 'rooms', roomData.id!), {
+        status: 'finished'
+      });
+      return;
+    }
+
+    // Verificar condição de Morte Súbita (todos votaram)
+    if (roomData.council?.votes.length === roomData.council?.members.length) {
+      const voteCount = new Map<string, number>();
+      
+      // Contar votos ponderados
+      roomData.council.votes.forEach(vote => {
+        const currentCount = voteCount.get(vote.votedFor) || 0;
+        voteCount.set(vote.votedFor, currentCount + vote.voteWeight);
+      });
+
+      // Encontrar jogador com mais votos
+      let maxVotes = 0;
+      let mostVotedPlayer = '';
+      voteCount.forEach((votes, playerId) => {
+        if (votes > maxVotes) {
+          maxVotes = votes;
+          mostVotedPlayer = playerId;
+        }
+      });
+
+      // Eliminar jogador mais votado
+      if (mostVotedPlayer) {
+        const updatedShips = roomData.ships.map(ship => 
+          ship.playerId === mostVotedPlayer ? { ...ship, health: 0 } : ship
+        );
+
+        await updateDoc(doc(db, 'rooms', roomData.id!), {
+          ships: updatedShips,
+          'council.votes': [],
+          'council.lastVoteTime': new Date()
+        });
+      }
+    }
+  };
+
+  const voteInCouncil = async (targetPlayerId: string) => {
+    if (!currentRoom || !currentPlayer) return;
+    
+    // Verificar se o jogador está no conselho
+    if (!currentRoom.council?.members.includes(currentPlayer.id)) {
+      toast.error('Apenas membros do Conselho podem votar');
+      return;
+    }
+
+    // Verificar se já votou
+    if (currentRoom.council.votes.some(v => v.playerId === currentPlayer.id)) {
+      toast.error('Você já votou nesta rodada');
+      return;
+    }
+
+    // Calcular peso do voto (primeiro a morrer tem peso 3)
+    const voteWeight = currentRoom.council.members[0] === currentPlayer.id ? 3 : 1;
+
+    const updatedVotes = [
+      ...currentRoom.council.votes,
+      { playerId: currentPlayer.id, votedFor: targetPlayerId, voteWeight }
+    ];
+
+    await updateDoc(doc(db, 'rooms', currentRoom.id!), {
+      'council.votes': updatedVotes
+    });
+
+    // Verificar condições de fim de jogo após o voto
+    await checkGameEnd({
+      ...currentRoom,
+      council: { ...currentRoom.council, votes: updatedVotes }
+    });
+  };
+
   const [currentRoom, setCurrentRoom] = useState<GameRoom | null>(null);
   const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null);
   const [playerRooms, setPlayerRooms] = useState<GameRoom[]>([]);
@@ -62,9 +145,11 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         setCurrentPlayer({
           id: user.uid,
           name: user.displayName || `Player ${user.uid.slice(0, 4)}`,
-          actionPoints: 10,
+          actionPoints: 0,
           ships: [],
-          lastPointGain: new Date()
+          lastPointGain: new Date(),
+          isAlive: true,
+          votes: 0
         });
       } else {
         setCurrentPlayer(null);
@@ -115,10 +200,11 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    try {
+    try
+    {
       setLoading(true);
       setError(null);
-      
+        
       const gridSize = { width: 10, height: 10 };
       const occupiedPositions: Position[] = [];
   
@@ -130,8 +216,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         id: crypto.randomUUID(),
         type: shipType,
         position: initialPosition,
-        health: shipType === 'fighter' ? 80 : 120,
-        actionPoints: shipType === 'fighter' ? 3 : 2,
+        health: 3,
+        actionPoints: 1,
+        reach: 2,
         playerId: currentPlayer.id // Adicionando o ID do jogador à nave
       };
   
@@ -156,13 +243,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         currentTurn: currentPlayer.id,
         ships: [newShip],
         debris,
-        actionTimeWindows: timeWindows // adicionar os horários de ações
+        actionTimeWindows: timeWindows
       });
-  
-      // await updateDoc(doc(db, 'players', currentPlayer.id), {
-      //   ships: arrayUnion(newShip)
-      // });
-  
+
       setCurrentRoom({
         id: roomRef.id,
         name,
@@ -173,7 +256,12 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         currentTurn: currentPlayer.id,
         debris,
         ships: [newShip],
-        actionTimeWindows // Adicionar os horários de ações aqui também
+        actionTimeWindows,
+        council: {
+          members: [],
+          votes: [],
+          lastVoteTime: new Date()
+        }
       });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Erro ao criar sala");
@@ -216,6 +304,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
           position: initialPosition,
           health: 3,
           actionPoints: 1,
+          reach: 2,
           playerId: currentPlayer.id
         };
 
@@ -290,7 +379,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         throw new Error('Ações só podem ser realizadas nos horários permitidos');
       }
       
-      const roomRef = doc(db, 'rooms', currentRoom.id);
+      const roomRef = doc(db, 'rooms', currentRoom.id!);
       const roomDoc = await getDoc(roomRef);
       if (!roomDoc.exists()) throw new Error('Sala não encontrada');
       
@@ -313,13 +402,15 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   
       switch (action.type) {
         case 'MOVE':
+        {
           if (!action.target) throw new Error('Posição alvo não especificada');
           const targetPos = action.target as Position;
           
-          // Check if movement is valid (can move in any direction)
+          // Verificar se o movimento está dentro do alcance da nave
           const xDiff = Math.abs(targetPos.x - ship.position.x);
           const yDiff = Math.abs(targetPos.y - ship.position.y);
-          if (xDiff > 1 || yDiff > 1) throw new Error('Invalid movement: must move to an adjacent cell');
+          const totalDistance = xDiff + yDiff;
+          if (totalDistance > ship.reach) throw new Error(`Movimento inválido: deve estar dentro de ${ship.reach} células de alcance`);
           
           // Verificar se a posição está ocupada
           const isOccupied = roomData.ships.some(s => s.id !== ship.id && s.position.x === targetPos.x && s.position.y === targetPos.y) ||
@@ -331,35 +422,61 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
             position: targetPos,
             actionPoints: ship.actionPoints - 1
           };
-          updateLocalState(updatedShips); // Atualização local imediata
+          updateLocalState(updatedShips);
           break;
-          
+        }
         case 'ATTACK':
+        {
           if (!action.target) throw new Error('Alvo não especificado');
           const targetPosition = action.target as Position;
           
-          // Verificar alcance do ataque (distância de 1 célula)
+          // Verificar alcance do ataque
           const attackDistance = Math.abs(targetPosition.x - ship.position.x) + Math.abs(targetPosition.y - ship.position.y);
-          if (attackDistance > 2) throw new Error('Alvo fora de alcance'); // Aumentado para 2 células de alcance
+          if (attackDistance > ship.reach) throw new Error('Alvo fora de alcance');
           
           // Procurar por naves ou detritos na posição alvo
           const targetShip = roomData.ships.find(s => s.position.x === targetPosition.x && s.position.y === targetPosition.y);
           const targetDebris = roomData.debris.find(d => d.position.x === targetPosition.x && d.position.y === targetPosition.y);
           
           if (targetShip) {
-            const damage = ship.type === 'fighter' ? 30 : 20;
             const targetIndex = updatedShips.findIndex(s => s.id === targetShip.id);
             updatedShips[targetIndex] = {
               ...targetShip,
-              health: Math.max(0, targetShip.health - damage)
+              health: Math.max(0, targetShip.health - 1)
             };
+
+            // Se a nave foi destruída
+            if (updatedShips[targetIndex].health <= 0) {
+              // Transferir PA para o atacante
+              updatedShips[shipIndex] = {
+                ...ship,
+                actionPoints: ship.actionPoints + targetShip.actionPoints
+              };
+
+              // Adicionar jogador ao conselho se for sua última nave
+              const targetPlayer = targetShip.playerId;
+              const hasOtherShips = updatedShips.some(s => s.playerId === targetPlayer && s.id !== targetShip.id && s.health > 0);
+              
+              if (!hasOtherShips) {
+                const updatedRoom = {
+                  ...roomData,
+                  council: roomData.council || { members: [], votes: [], lastVoteTime: new Date() }
+                };
+
+                if (!updatedRoom.council.members.includes(targetPlayer)) {
+                  updatedRoom.council.members.push(targetPlayer);
+                  await updateDoc(roomRef, {
+                    council: updatedRoom.council
+                  });
+                }
+              }
+            }
           } else if (targetDebris) {
-            const damage = ship.type === 'fighter' ? 30 : 20;
             const updatedDebris = [...roomData.debris];
             const debrisIndex = updatedDebris.findIndex(d => d.id === targetDebris.id);
             updatedDebris[debrisIndex] = {
               ...targetDebris,
-              health: Math.max(0, targetDebris.health - damage)
+              health: Math.max(0, targetDebris.health - 1)
             };
             
             if (updatedDebris[debrisIndex].health <= 0) {
@@ -379,9 +496,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
           };
           updateLocalState(updatedShips);
           break;
-          
+        }
         case 'DONATE':
-          if (!action.target) throw new Error('Nave alvo não especificada');
+        { if (!action.target) throw new Error('Nave alvo não especificada');
           if (!action.points || action.points <= 0) throw new Error('Quantidade de pontos inválida');
           if (action.points > ship.actionPoints) throw new Error('Pontos de ação insuficientes');
           
@@ -391,10 +508,10 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
           
           const targetShipForDonation = updatedShips[targetShipIndex];
           
-          // Verificar se a nave alvo está no alcance (2 células)
+          // Verificar se a nave alvo está no alcance
           const donateDistance = Math.abs(targetShipForDonation.position.x - ship.position.x) + 
                           Math.abs(targetShipForDonation.position.y - ship.position.y);
-          if (donateDistance > 2) throw new Error('Nave alvo fora de alcance para doação');
+          if (donateDistance > ship.reach) throw new Error('Nave alvo fora de alcance para doação');
           
           updatedShips[targetShipIndex] = {
             ...updatedShips[targetShipIndex],
@@ -406,12 +523,41 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
             actionPoints: ship.actionPoints - action.points
           };
           break;
+        }
+        case 'RECOVER':
+          if (ship.actionPoints < 3) throw new Error('Pontos de ação insuficientes');
+          if (ship.health >= 3) throw new Error('Nave já está com vida máxima');
+
+          updatedShips[shipIndex] = {
+            ...ship,
+            health: Math.min(3, ship.health + 1),
+            actionPoints: ship.actionPoints - 3
+          };
+          updateLocalState(updatedShips);
+          break;
+
+        case 'IMPROVE':
+          if (ship.actionPoints < 3) throw new Error('Pontos de ação insuficientes');
+
+          updatedShips[shipIndex] = {
+            ...ship,
+            reach: ship.reach + 1,
+            actionPoints: ship.actionPoints - 3
+          };
+          updateLocalState(updatedShips);
+          break;
       }
       
       // Atualizar a sala com as novas informações
       await updateDoc(roomRef, {
         ships: updatedShips
       });
+
+      // Verificar condições de fim de jogo após cada ação
+      // await checkGameEnd({
+      //   ...roomData,
+      //   ships: updatedShips
+      // });
       
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erro ao executar ação');
@@ -435,6 +581,57 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribe();
   }, [currentRoom, currentRoom?.id]);
 
+   const [isDistributing, setIsDistributing] = useState(false);
+
+   const checkAndDistributePoints = async () => {
+     if (!currentRoom || isDistributing) return;
+
+     try {
+       const roomRef = doc(db, "rooms", currentRoom.id!);
+       const roomDoc = await getDoc(roomRef);
+       if (!roomDoc.exists()) return;
+
+       const roomData = roomDoc.data() as GameRoom;
+       const now = new Date();
+       const lastDistribution = roomData.lastPointDistribution
+         ? new Date(roomData.lastPointDistribution.seconds * 1000)
+         : new Date(0);
+
+       const timeDiff = now.getTime() - lastDistribution.getTime();
+       const hoursPassed = timeDiff / (1000 * 60 * 60);
+
+       if (hoursPassed >= 24) {
+         setIsDistributing(true);
+
+         // Primeiro atualizar o timestamp
+         await updateDoc(roomRef, {
+           lastPointDistribution: serverTimestamp(),
+         });
+
+         // Depois distribuir os pontos
+         const updatedShips = roomData.ships.map((ship) => ({
+           ...ship,
+           actionPoints: ship.actionPoints + 1,
+         }));
+
+         await updateDoc(roomRef, {
+           ships: updatedShips,
+         });
+
+         toast.success("Pontos de ação distribuídos para todas as naves");
+       }
+     } catch (error) {
+       console.error("Erro ao distribuir pontos:", error);
+       toast.error("Falha ao distribuir pontos de ação");
+     } finally {
+       setIsDistributing(false);
+     }
+   };
+
+   useEffect(() => {
+     if (!currentRoom) return;
+     checkAndDistributePoints();
+   }, [currentRoom]);
 
   const isMyTurn = currentRoom?.currentTurn === currentPlayer?.id;
 
@@ -449,6 +646,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         setCurrentRoom,
         joinRoom,
         performAction,
+        voteInCouncil,
         loading,
         error
       }}
