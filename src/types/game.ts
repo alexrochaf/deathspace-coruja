@@ -48,12 +48,24 @@ export interface ActionTimeWindow {
   end: string;
 }
 
+export interface GameLog {
+  timestamp: Date | Timestamp;
+  action: string;
+  playerId: string;
+  targetId?: string | null;
+  details?: {
+    points?: number;
+    position?: Position;
+    type?: string;
+  } | null;
+}
+
 import { Timestamp } from 'firebase/firestore';
 
 export interface GameRoom {
   id?: string;
   name: string;
-  players: string[];
+  players: Player[];
   gridSize: {
     width: number;
     height: number;
@@ -66,7 +78,7 @@ export interface GameRoom {
   actionTimeWindows: ActionTimeWindow[];
   lastPointDistribution?: Timestamp;
   council: {
-    members: string[];
+    members: Player[];
     votes: {
       playerId: string;
       votedFor: string;
@@ -74,4 +86,5 @@ export interface GameRoom {
     }[];
     lastVoteTime: Date;
   };
+  logs: GameLog[];
 }

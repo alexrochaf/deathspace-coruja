@@ -2,7 +2,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { db, auth } from '../config/firebase';
 import { collection, doc, getDoc, onSnapshot, addDoc, updateDoc, serverTimestamp, arrayUnion } from 'firebase/firestore';
-import type { GameRoom, Player, GameAction, Ship, ShipType, Position, Debris, DebrisType, ActionTimeWindow } from '../types/game';
+import type { GameRoom, Player, GameAction, Ship, ShipType, Position, Debris, DebrisType, ActionTimeWindow, GameLog } from '../types/game';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -52,8 +52,8 @@ const createDebris = (type: DebrisType, position: Position): Debris => ({
 
 export const GameProvider = ({ children }: { children: ReactNode }) => {
   const checkGameEnd = async (roomData: GameRoom) => {
-    const alivePlayers = roomData.players.filter(playerId => 
-      roomData.ships.some(ship => ship.playerId === playerId && ship.health > 0)
+    const alivePlayers = roomData.players.filter(player => 
+      roomData.ships.some(ship => ship.playerId === player.id && ship.health > 0)
     );
 
     // Verificar condição de 4 jogadores restantes
@@ -103,7 +103,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     if (!currentRoom || !currentPlayer) return;
     
     // Verificar se o jogador está no conselho
-    if (!currentRoom.council?.members.includes(currentPlayer.id)) {
+    if (!currentRoom.council?.members.includes(currentPlayer)) {
       toast.error('Apenas membros do Conselho podem votar');
       return;
     }
@@ -115,7 +115,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     }
 
     // Calcular peso do voto (primeiro a morrer tem peso 3)
-    const voteWeight = currentRoom.council.members[0] === currentPlayer.id ? 3 : 1;
+    const voteWeight = currentRoom.council.members[0] === currentPlayer ? 3 : 1;
 
     const updatedVotes = [
       ...currentRoom.council.votes,
@@ -144,7 +144,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       if (user) {
         setCurrentPlayer({
           id: user.uid,
-          name: user.displayName || `Player ${user.uid.slice(0, 4)}`,
+          name: user.displayName || 'Jogador Anônimo',
           actionPoints: 0,
           ships: [],
           lastPointGain: new Date(),
@@ -174,7 +174,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
           
           // Filtrar apenas as salas onde o jogador está participando
           const playerRooms = rooms.filter(room => 
-            room.players.includes(currentPlayer.id)
+            room.players.includes(currentPlayer)
           );
           
           setPlayerRooms(playerRooms);
@@ -236,7 +236,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   
       const roomRef = await addDoc(collection(db, 'rooms'), {
         name,
-        players: [currentPlayer.id],
+        players: [currentPlayer],
         gridSize,
         status: 'waiting',
         createdAt: serverTimestamp(),
@@ -249,7 +249,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       setCurrentRoom({
         id: roomRef.id,
         name,
-        players: [currentPlayer.id],
+        players: [currentPlayer],
         gridSize,
         status: 'waiting',
         createdAt: new Date(),
@@ -261,7 +261,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
           members: [],
           votes: [],
           lastVoteTime: new Date()
-        }
+        },
+        logs: []
       });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Erro ao criar sala");
@@ -288,7 +289,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       const roomData = roomDoc.data() as GameRoom;
       
       // Verificar se o jogador já está na sala
-      if (!roomData.players.includes(currentPlayer.id)) {
+      if (!roomData.players.includes(currentPlayer)) {
         // Criar nova nave para o jogador se ele não tiver nave na sala
         const gridSize = roomData.gridSize;
         const occupiedPositions = [
@@ -311,7 +312,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         // Atualizar a sala com a nova nave
         const updatedRoom = {
           ...roomData,
-          players: [...roomData.players, currentPlayer.id],
+          players: [...roomData.players, currentPlayer],
           ships: [...(roomData.ships || []), newShip]
         };
 
@@ -368,6 +369,33 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     });
   };
   
+  const createActionLog = (action: GameAction, roomData: GameRoom): GameLog => {
+    const ship = roomData.ships.find((s) => s.id === action.shipId);
+
+    // Garantir que todos os campos tenham valores válidos
+    const details: Record<string, unknown> = {};
+
+    if (action.points !== undefined) {
+      details.points = action.points;
+    }
+
+    if (typeof action.target === "object" && action.target !== null) {
+      details.position = action.target;
+    }
+
+    if (ship?.type) {
+      details.type = ship.type;
+    }
+
+    return {
+      timestamp: new Date(),
+      action: action.type,
+      playerId: action.playerId,
+      targetId: typeof action.target === "string" ? action.target : null,
+      details: Object.keys(details).length > 0 ? details : null,
+    };
+  };
+
   const performAction = async (action: GameAction) => {
     try {
       setLoading(true);
@@ -391,6 +419,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       
       const updatedShips = [...roomData.ships];
       const shipIndex = updatedShips.findIndex(s => s.id === action.shipId);
+      
+      // Criar o log da ação antes de executá-la
+      const actionLog = createActionLog(action, roomData);
       
       // Atualizar o estado local imediatamente antes de executar a ação
       const updateLocalState = (ships: Ship[]) => {
@@ -454,8 +485,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
               };
 
               // Adicionar jogador ao conselho se for sua última nave
-              const targetPlayer = targetShip.playerId;
-              const hasOtherShips = updatedShips.some(s => s.playerId === targetPlayer && s.id !== targetShip.id && s.health > 0);
+              const targetPlayer = roomData.players.find(player => player.id === targetShip.playerId);
+              if (!targetPlayer) throw new Error('Target player not found');
+              const hasOtherShips = updatedShips.some(s => s.playerId === targetPlayer.id && s.id !== targetShip.id && s.health > 0);
               
               if (!hasOtherShips) {
                 const updatedRoom = {
@@ -550,7 +582,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       
       // Atualizar a sala com as novas informações
       await updateDoc(roomRef, {
-        ships: updatedShips
+        ships: updatedShips,
+        logs: arrayUnion(actionLog)
       });
 
       // Verificar condições de fim de jogo após cada ação
@@ -614,8 +647,20 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
            actionPoints: ship.actionPoints + 1,
          }));
 
+         const pointDistributionLogs = updatedShips.map((ship) => ({
+           timestamp: new Date(),
+           action: "POINT_DISTRIBUTION",
+           playerId: ship.playerId,
+           targetId: null,
+           details: {
+             points: 1,
+             type: ship.type,
+           },
+         }));
+
          await updateDoc(roomRef, {
            ships: updatedShips,
+           logs: arrayUnion(...pointDistributionLogs)
          });
 
          toast.success("Pontos de ação distribuídos para todas as naves");

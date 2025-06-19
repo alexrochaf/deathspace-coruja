@@ -20,6 +20,7 @@ import {
   Flex,
   Avatar,
   HStack,
+  Icon,
 } from "@chakra-ui/react";
 import { useState } from 'react';
 import { GameBoard } from '../components/GameBoard';
@@ -30,6 +31,9 @@ import { auth } from '../config/firebase';
 // Ship assets
 import fighterSvg from '../assets/spaceships/fighter.svg';
 import cruiserSvg from '../assets/spaceships/cruiser.svg';
+import { GameLogList } from "../components/GameLog";
+import { FiMove, FiTarget, FiGift, FiX, FiLogOut } from 'react-icons/fi';
+import { GiSpaceship, GiBattleship } from 'react-icons/gi';
 
 export const Game: React.FC = () => {
   const {
@@ -363,13 +367,12 @@ export const Game: React.FC = () => {
                       p={4}
                       borderWidth={2}
                       borderRadius="lg"
-                      borderColor={
-                        selectedShip === "fighter" ? "blue.500" : "gray.200"
-                      }
+                      borderColor={selectedShip === "fighter" ? "blue.500" : "gray.200"}
                       cursor="pointer"
                       onClick={() => setSelectedShip("fighter")}
                     >
                       <VStack>
+                        <Icon as={GiSpaceship} boxSize="50px" />
                         <Image src={fighterSvg} alt="Fighter" boxSize="100px" />
                         <Text fontWeight="bold">Fighter</Text>
                         <Text fontSize="sm">Rápido e Ágil</Text>
@@ -379,13 +382,12 @@ export const Game: React.FC = () => {
                       p={4}
                       borderWidth={2}
                       borderRadius="lg"
-                      borderColor={
-                        selectedShip === "cruiser" ? "blue.500" : "gray.200"
-                      }
+                      borderColor={selectedShip === "cruiser" ? "blue.500" : "gray.200"}
                       cursor="pointer"
                       onClick={() => setSelectedShip("cruiser")}
                     >
                       <VStack>
+                        <Icon as={GiBattleship} boxSize="50px" />
                         <Image src={cruiserSvg} alt="Cruiser" boxSize="100px" />
                         <Text fontWeight="bold">Cruiser</Text>
                         <Text fontSize="sm">Resistente e Poderoso</Text>
@@ -408,32 +410,34 @@ export const Game: React.FC = () => {
           </VStack>
         </Container>
       ) : (
-        <Container maxW="container.xl" py={8}>
-          <Grid templateColumns="250px 1fr 250px" gap={4} w="100%">
-            {/* Painel Esquerdo - Informações do Jogador */}
-            <Box bg="gray.800" p={4} borderRadius="md" color="white">
-              <VStack spacing={4} align="stretch">
-                <Heading size="md">Jogador</Heading>
-                <Text>Nome: {currentPlayer?.name}</Text>
-                <Text>Sala: {currentRoom.name}</Text>
-                <Text>ID da Sala: {currentRoom.id}</Text>
-                <Divider />
-                <Button colorScheme="red" size="sm" onClick={handleLeaveRoom}>
-                  Sair da Sala
-                </Button>
-                <Button colorScheme="gray" size="sm" onClick={handleLogout}>
-                  Deslogar
-                </Button>
-              </VStack>
-            </Box>
+        <Container maxW="container.xl" py={5}>
+          <Grid
+            templateColumns={{ base: "1fr", lg: "3fr 1fr" }}
+            gap={6}
+            h={{ base: "auto", lg: "calc(100vh - 100px)" }}
+          >
+            <VStack spacing={6} align="stretch">
+              {/* Painel Esquerdo - Informações do Jogador */}
+              <Box bg="gray.800" p={4} borderRadius="md" color="white">
+                <VStack spacing={4} align="stretch">
+                  <Heading size="md">Jogador</Heading>
+                  <Text>Nome: {currentPlayer?.name}</Text>
+                  <Text>Sala: {currentRoom.name}</Text>
+                  <Text>ID da Sala: {currentRoom.id}</Text>
+                  <Divider />
+                  <Button colorScheme="red" size="sm" onClick={handleLeaveRoom}>
+                    Sair da Sala
+                  </Button>
+                </VStack>
+              </Box>
 
-            {/* Tabuleiro Central */}
-            <VStack spacing={4}>
-              <GameBoard
-                onCellClick={handleCellClick}
-                onShipSelect={handleShipClick}
-                selectedAction={selectedAction}
-                getShipInfo={(ship) => `Vida: ${ship.health}\n
+              {/* Tabuleiro Central */}
+              <VStack spacing={4}>
+                <GameBoard
+                  onCellClick={handleCellClick}
+                  onShipSelect={handleShipClick}
+                  selectedAction={selectedAction}
+                  getShipInfo={(ship) => `Vida: ${ship.health}\n
                                         Pontos de Ação: ${ship.actionPoints}\n
                                         Tipo: ${
                                           ship.type === "fighter"
@@ -445,71 +449,87 @@ export const Game: React.FC = () => {
                                             .find((p) => p === ship.playerId)
                                             ?.slice(0, 8) || "Desconhecido"
                                         }`}
-              />
-            </VStack>
-
-            {/* Painel Direito - Informações da Nave e Ações */}
-            <Box bg="gray.800" p={4} borderRadius="md" color="white">
-              <VStack spacing={4} align="stretch">
-                <Heading size="md">Controles</Heading>
-                {selectedShipInfo ? (
-                  <>
-                    <Box>
-                      <Heading size="sm">Nave Selecionada</Heading>
-                      <Text>Tipo: {selectedShipInfo.type}</Text>
-                      <Text>
-                        Pontos de Ação: {selectedShipInfo.actionPoints}
-                      </Text>
-                      <Text>Vida: {selectedShipInfo.health}</Text>
-                    </Box>
-                    <Divider />
-                    <VStack spacing={2}>
-                      <Heading size="sm">Ações</Heading>
-                      <Button
-                        w="100%"
-                        colorScheme={
-                          selectedAction === "MOVE" ? "blue" : "gray"
-                        }
-                        onClick={() => setSelectedAction("MOVE")}
-                        isDisabled={selectedShipInfo.actionPoints <= 0}
-                        isLoading={loading}
-                      >
-                        Mover
-                      </Button>
-                      <Button
-                        w="100%"
-                        colorScheme={
-                          selectedAction === "ATTACK" ? "red" : "gray"
-                        }
-                        onClick={() => setSelectedAction("ATTACK")}
-                        isDisabled={selectedShipInfo.actionPoints <= 0}
-                      >
-                        Atacar
-                      </Button>
-                      <Button
-                        w="100%"
-                        colorScheme={
-                          selectedAction === "DONATE" ? "green" : "gray"
-                        }
-                        onClick={() => setSelectedAction("DONATE")}
-                        isDisabled={selectedShipInfo.actionPoints <= 0}
-                      >
-                        Doar AP
-                      </Button>
-                      <Button
-                        w="100%"
-                        colorScheme="gray"
-                        onClick={() => setSelectedAction(null)}
-                        isDisabled={!selectedAction}
-                      >
-                        Cancelar Ação
-                      </Button>
-                    </VStack>
-                  </>
-                ) : (
-                  <Text>Selecione uma nave para ver as ações disponíveis</Text>
-                )}
+                />
               </VStack>
+
+              {/* Painel Direito - Informações da Nave e Ações */}
+              <Box bg="gray.800" p={4} borderRadius="md" color="white">
+                <VStack spacing={4} align="stretch">
+                  <Heading size="md">Controles</Heading>
+                  {selectedShipInfo ? (
+                    <>
+                      <Box>
+                        <Heading size="sm">Nave Selecionada</Heading>
+                        <Text>Tipo: {selectedShipInfo.type}</Text>
+                        <Text>
+                          Pontos de Ação: {selectedShipInfo.actionPoints}
+                        </Text>
+                        <Text>Vida: {selectedShipInfo.health}</Text>
+                      </Box>
+                      <Divider />
+                      <VStack spacing={2}>
+                        <Heading size="sm">Ações</Heading>
+                        <SimpleGrid columns={2} spacing={2} w="100%">
+                          <Button
+                            colorScheme={selectedAction === "MOVE" ? "blue" : "gray"}
+                            onClick={() => setSelectedAction("MOVE")}
+                            isDisabled={selectedShipInfo.actionPoints <= 0}
+                            isLoading={loading}
+                            leftIcon={<Icon as={FiMove} />}
+                            size="sm"
+                          >
+                            Mover
+                          </Button>
+                          <Button
+                            colorScheme={selectedAction === "ATTACK" ? "red" : "gray"}
+                            onClick={() => setSelectedAction("ATTACK")}
+                            isDisabled={selectedShipInfo.actionPoints <= 0}
+                            leftIcon={<Icon as={FiTarget} />}
+                            size="sm"
+                          >
+                            Atacar
+                          </Button>
+                          <Button
+                            colorScheme={selectedAction === "DONATE" ? "green" : "gray"}
+                            onClick={() => setSelectedAction("DONATE")}
+                            isDisabled={selectedShipInfo.actionPoints <= 0}
+                            leftIcon={<Icon as={FiGift} />}
+                            size="sm"
+                          >
+                            Doar AP
+                          </Button>
+                          <Button
+                            colorScheme="gray"
+                            onClick={() => setSelectedAction(null)}
+                            isDisabled={!selectedAction}
+                            leftIcon={<Icon as={FiX} />}
+                            size="sm"
+                          >
+                            Cancelar
+                          </Button>
+                        </SimpleGrid>
+                      </VStack>
+                    </>
+                  ) : (
+                    <Text>
+                      Selecione uma nave para ver as ações disponíveis
+                    </Text>
+                  )}
+                </VStack>
+              </Box>
+            </VStack>
+            <Box
+              h={{ base: "300px", lg: "100%" }}
+              minH="300px"
+              borderRadius="md"
+              color="white"
+              p={4}
+              bg="gray.900"
+            >
+              <Heading size="md" mb={4} px={4} pt={4}>
+                Histórico de Ações
+              </Heading>
+              <GameLogList />
             </Box>
           </Grid>
         </Container>
@@ -546,7 +566,6 @@ export const Game: React.FC = () => {
   //                   Criar
   //                 </Button>
   //               </VStack>
-  //             </Box>
 
   //             {/* Entrar em Sala */}
   //             <Box p={4} borderWidth="1px" borderRadius="lg">
