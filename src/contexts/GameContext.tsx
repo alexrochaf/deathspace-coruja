@@ -692,12 +692,11 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
 
           const targetShipForDonation = updatedShips[targetShipIndex];
 
-          const donateDistance =
-            Math.abs(targetShipForDonation.position.x - ship.position.x) +
-            Math.abs(targetShipForDonation.position.y - ship.position.y);
+          const xDiff = Math.abs(targetShipForDonation.position.x - ship.position.x);
+          const yDiff = Math.abs(targetShipForDonation.position.y - ship.position.y);
+          const donateDistance = Math.max(xDiff, yDiff);
           if (donateDistance > ship.reach)
             throw new Error("Nave alvo fora de alcance para doação");
-
           updatedShips[targetShipIndex] = {
             ...updatedShips[targetShipIndex],
             actionPoints: updatedShips[targetShipIndex].actionPoints + 1,
