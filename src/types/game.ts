@@ -14,6 +14,7 @@ export interface Ship {
   position: Position;
   health: number;
   actionPoints: number;
+  reach: number;
   playerId: string;
 }
 
@@ -23,7 +24,7 @@ export interface Position {
 }
 
 export type GameAction = {
-  type: 'MOVE' | 'ATTACK' | 'DONATE';
+  type: 'MOVE' | 'ATTACK' | 'DONATE' | 'IMPROVE' | 'RECOVER';
   shipId: string;
   playerId: string;
   target?: Position | string;

@@ -214,9 +214,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
           id: crypto.randomUUID(),
           type: shipType,
           position: initialPosition,
-          health: shipType === 'fighter' ? 80 : 120,
-          actionPoints: shipType === 'fighter' ? 3 : 2,
-          playerId: currentPlayer.id // Adicionar o ID do jogador à nave
+          health: 3,
+          actionPoints: 1,
+          playerId: currentPlayer.id
         };
 
         // Atualizar a sala com a nova nave
