@@ -1,6 +1,6 @@
 import { Box, Grid, GridItem, Tooltip } from "@chakra-ui/react";
 import { useGame } from "../contexts/GameContext";
-import type { Position, Ship, Debris } from "../types/game";
+import type { Position, Ship, Debris, ShipType } from "../types/game";
 import { useEffect, useState } from "react";
 
 // Importe os SVGs dos detritos e naves
@@ -8,11 +8,14 @@ import asteroidSvg from "../assets/debris/asteroid.svg";
 import satelliteSvg from "../assets/debris/satellite.svg";
 import fighterSvg from "../assets/spaceships/fighter.svg";
 import cruiserSvg from "../assets/spaceships/cruiser.svg";
+import destroyerSvg from "../assets/spaceships/destroyer.svg";
+import scoutSvg from "../assets/spaceships/scout.svg";
+import destroyedSvg from "../assets/spaceships/destroyed.svg";
 
 interface GameBoardProps {
   onCellClick: (position: Position) => void;
   onShipSelect?: (ship: Ship) => void;
-  selectedAction?: "MOVE" | "ATTACK" | "DONATE" | null;
+  selectedAction?: string | null;
   getShipInfo: (ship: Ship) => string;
 }
 
@@ -47,6 +50,21 @@ export const GameBoard = ({
     );
   };
 
+  const getShipImage = (type: ShipType) => {
+    switch (type) {
+      case "fighter":
+        return fighterSvg;
+      case "cruiser":
+        return cruiserSvg;
+      case "destroyer":
+        return destroyerSvg;
+      case "scout":
+        return scoutSvg;
+      default:
+        return fighterSvg;
+    }
+  };
+
   const getDebrisAtPosition = (pos: Position): Debris | undefined => {
     return debris?.find(
       (d) => d.position.x === pos.x && d.position.y === pos.y
@@ -61,7 +79,7 @@ export const GameBoard = ({
       return;
     }
 
-    if (shipAtPosition) {
+    if (shipAtPosition && shipAtPosition.health > 0) {
       setSelectedShip(shipAtPosition);
       onShipSelect?.(shipAtPosition);
       return;
@@ -104,7 +122,7 @@ export const GameBoard = ({
                     Math.abs(y - selectedShip.position.y)
                   ) <= selectedShip.reach
                     ? selectedShip.playerId === currentPlayer?.id
-                      ? "blue.500"
+                      ? "green.500"
                       : "red.500"
                     : "gray.300"
                 }
@@ -127,7 +145,11 @@ export const GameBoard = ({
               >
                 {ship && (
                   <Tooltip
-                    label={getShipInfo(ship) ?? "Nave"}
+                    label={
+                      ship.health <= 0
+                        ? "Nave Destruída"
+                        : getShipInfo(ship) ?? "Nave"
+                    }
                     hasArrow
                     placement="top"
                     bg="gray.700"
@@ -137,11 +159,18 @@ export const GameBoard = ({
                   >
                     <Box
                       as="img"
-                      src={ship.type === "fighter" ? fighterSvg : cruiserSvg}
-                      alt={ship.type}
+                      src={
+                        ship.health <= 0
+                          ? destroyedSvg
+                          : getShipImage(ship.type)
+                      }
+                      alt={ship.health <= 0 ? "destroyed" : ship.type}
                       w="90%"
                       h="90%"
-                      opacity={ship.actionPoints > 0 ? 1 : 0.5}
+                      opacity={
+                        ship.health <= 0 ? 0.7 : ship.actionPoints > 0 ? 1 : 0.5
+                      }
+                      transform={ship.health <= 0 ? "rotate(15deg)" : undefined}
                     />
                   </Tooltip>
                 )}

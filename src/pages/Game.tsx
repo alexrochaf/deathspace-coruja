@@ -20,7 +20,6 @@ import {
   Flex,
   Avatar,
   HStack,
-  Icon,
 } from "@chakra-ui/react";
 import { useState } from 'react';
 import { GameBoard } from '../components/GameBoard';
@@ -31,9 +30,9 @@ import { auth } from '../config/firebase';
 // Ship assets
 import fighterSvg from '../assets/spaceships/fighter.svg';
 import cruiserSvg from '../assets/spaceships/cruiser.svg';
+import destroyerSvg from '../assets/spaceships/destroyer.svg';
+import scoutSvg from '../assets/spaceships/scout.svg';
 import { GameLogList } from "../components/GameLog";
-import { FiMove, FiTarget, FiGift, FiX, FiLogOut } from 'react-icons/fi';
-import { GiSpaceship, GiBattleship } from 'react-icons/gi';
 
 export const Game: React.FC = () => {
   const {
@@ -48,7 +47,7 @@ export const Game: React.FC = () => {
   } = useGame();
   const [roomName, setRoomName] = useState('');
   const [roomId, setRoomId] = useState('');
-  const [selectedAction, setSelectedAction] = useState<'MOVE' | 'ATTACK' | 'DONATE' | null>(null);
+  const [selectedAction, setSelectedAction] = useState<'MOVE' | 'ATTACK' | 'DONATE' | 'RECOVER' | 'IMPROVE' | null>(null);
   const [isShipSelectOpen, setIsShipSelectOpen] = useState(false);
   const [selectedShip, setSelectedShip] = useState<ShipType>('fighter');
   const [selectedShipInfo, setSelectedShipInfo] = useState<Ship | null>(null);
@@ -372,7 +371,6 @@ export const Game: React.FC = () => {
                       onClick={() => setSelectedShip("fighter")}
                     >
                       <VStack>
-                        <Icon as={GiSpaceship} boxSize="50px" />
                         <Image src={fighterSvg} alt="Fighter" boxSize="100px" />
                         <Text fontWeight="bold">Fighter</Text>
                         <Text fontSize="sm">Rápido e Ágil</Text>
@@ -387,10 +385,37 @@ export const Game: React.FC = () => {
                       onClick={() => setSelectedShip("cruiser")}
                     >
                       <VStack>
-                        <Icon as={GiBattleship} boxSize="50px" />
                         <Image src={cruiserSvg} alt="Cruiser" boxSize="100px" />
                         <Text fontWeight="bold">Cruiser</Text>
                         <Text fontSize="sm">Resistente e Poderoso</Text>
+                      </VStack>
+                    </Box>
+                    <Box
+                      p={4}
+                      borderWidth={2}
+                      borderRadius="lg"
+                      borderColor={selectedShip === "destroyer" ? "blue.500" : "gray.200"}
+                      cursor="pointer"
+                      onClick={() => setSelectedShip("destroyer")}
+                    >
+                      <VStack>
+                        <Image src={destroyerSvg} alt="Destroyer" boxSize="100px" />
+                        <Text fontWeight="bold">Destroyer</Text>
+                        <Text fontSize="sm">Alto Dano e Alcance</Text>
+                      </VStack>
+                    </Box>
+                    <Box
+                      p={4}
+                      borderWidth={2}
+                      borderRadius="lg"
+                      borderColor={selectedShip === "scout" ? "blue.500" : "gray.200"}
+                      cursor="pointer"
+                      onClick={() => setSelectedShip("scout")}
+                    >
+                      <VStack>
+                        <Image src={scoutSvg} alt="Scout" boxSize="100px" />
+                        <Text fontWeight="bold">Scout</Text>
+                        <Text fontSize="sm">Alta Mobilidade e Visão</Text>
                       </VStack>
                     </Box>
                   </SimpleGrid>
@@ -437,18 +462,18 @@ export const Game: React.FC = () => {
                   onCellClick={handleCellClick}
                   onShipSelect={handleShipClick}
                   selectedAction={selectedAction}
-                  getShipInfo={(ship) => `Vida: ${ship.health}\n
-                                        Pontos de Ação: ${ship.actionPoints}\n
-                                        Tipo: ${
-                                          ship.type === "fighter"
-                                            ? "Caça"
-                                            : "Cruzador"
-                                        }
-                                        Dono: ${
-                                          currentRoom?.players
-                                            .find((p) => p === ship.playerId)
-                                            ?.slice(0, 8) || "Desconhecido"
-                                        }`}
+                    getShipInfo={(ship) =>
+                      `
+                      Vida: ${ship.health}
+                      Pontos de Ação: ${ship.actionPoints}\n
+                      Tipo: ${
+                        ship.type
+                      }\n
+                      Dono: ${
+                        currentRoom?.players
+                          .find((p) => p.id === ship.playerId)?.name || "Desconhecido"
+                    }`
+                  }
                 />
               </VStack>
 
@@ -468,44 +493,68 @@ export const Game: React.FC = () => {
                       </Box>
                       <Divider />
                       <VStack spacing={2}>
-                        <Heading size="sm">Ações</Heading>
+                        <Heading size="sm">Ações Espaciais</Heading>
                         <SimpleGrid columns={2} spacing={2} w="100%">
                           <Button
                             colorScheme={selectedAction === "MOVE" ? "blue" : "gray"}
                             onClick={() => setSelectedAction("MOVE")}
                             isDisabled={selectedShipInfo.actionPoints <= 0}
                             isLoading={loading}
-                            leftIcon={<Icon as={FiMove} />}
                             size="sm"
+                            _hover={{ transform: "scale(1.05)" }}
+                            transition="all 0.2s"
                           >
-                            Mover
+                            🚀 Propulsão
                           </Button>
                           <Button
                             colorScheme={selectedAction === "ATTACK" ? "red" : "gray"}
                             onClick={() => setSelectedAction("ATTACK")}
                             isDisabled={selectedShipInfo.actionPoints <= 0}
-                            leftIcon={<Icon as={FiTarget} />}
                             size="sm"
+                            _hover={{ transform: "scale(1.05)" }}
+                            transition="all 0.2s"
                           >
-                            Atacar
+                            💥 Laser
                           </Button>
                           <Button
                             colorScheme={selectedAction === "DONATE" ? "green" : "gray"}
                             onClick={() => setSelectedAction("DONATE")}
                             isDisabled={selectedShipInfo.actionPoints <= 0}
-                            leftIcon={<Icon as={FiGift} />}
                             size="sm"
+                            _hover={{ transform: "scale(1.05)" }}
+                            transition="all 0.2s"
                           >
-                            Doar AP
+                            🎁 Transferir
+                          </Button>
+                          <Button
+                            colorScheme={selectedAction === "RECOVER" ? "purple" : "gray"}
+                            onClick={() => setSelectedAction("RECOVER")}
+                            isDisabled={selectedShipInfo.actionPoints < 3 || selectedShipInfo.health >= 3}
+                            size="sm"
+                            _hover={{ transform: "scale(1.05)" }}
+                            transition="all 0.2s"
+                          >
+                            ❤️ Recuperar
+                          </Button>
+                          <Button
+                            colorScheme={selectedAction === "IMPROVE" ? "yellow" : "gray"}
+                            onClick={() => setSelectedAction("IMPROVE")}
+                            isDisabled={selectedShipInfo.actionPoints < 3}
+                            size="sm"
+                            _hover={{ transform: "scale(1.05)" }}
+                            transition="all 0.2s"
+                          >
+                            🎯 Aprimorar
                           </Button>
                           <Button
                             colorScheme="gray"
                             onClick={() => setSelectedAction(null)}
                             isDisabled={!selectedAction}
-                            leftIcon={<Icon as={FiX} />}
                             size="sm"
+                            _hover={{ transform: "scale(1.05)" }}
+                            transition="all 0.2s"
                           >
-                            Cancelar
+                            ❌ Abortar
                           </Button>
                         </SimpleGrid>
                       </VStack>
@@ -537,118 +586,4 @@ export const Game: React.FC = () => {
       ;
     </Box>
   );
-  
-  // Layout para Celular (Falta ajustar)
-  // return (
-  //   <Container maxW="100%" p={[2, 4]}>
-  //     <VStack spacing={4} align="stretch">
-  //       {!currentRoom ? (
-  //         <Box>
-  //           <Heading size={["md", "lg"]} mb={4}>
-  //             Abdera Game
-  //           </Heading>
-  //           <SimpleGrid columns={[1, null, 2]} spacing={4}>
-  //             {/* Criar Sala */}
-  //             <Box p={4} borderWidth="1px" borderRadius="lg">
-  //               <VStack spacing={3}>
-  //                 <Heading size="sm">Criar Sala</Heading>
-  //                 <Input
-  //                   placeholder="Nome da sala"
-  //                   value={roomName}
-  //                   onChange={(e) => setRoomName(e.target.value)}
-  //                 />
-  //                 <Button
-  //                   colorScheme="blue"
-  //                   onClick={handleCreateRoom}
-  //                   isLoading={loading}
-  //                   w="100%"
-  //                 >
-  //                   Criar
-  //                 </Button>
-  //               </VStack>
-
-  //             {/* Entrar em Sala */}
-  //             <Box p={4} borderWidth="1px" borderRadius="lg">
-  //               <VStack spacing={3}>
-  //                 <Heading size="sm">Entrar em Sala</Heading>
-  //                 <Input
-  //                   placeholder="ID da sala"
-  //                   value={roomId}
-  //                   onChange={(e) => setRoomId(e.target.value)}
-  //                 />
-  //                 <Button
-  //                   colorScheme="green"
-  //                   onClick={handleJoinRoom}
-  //                   isLoading={loading}
-  //                   w="100%"
-  //                 >
-  //                   Entrar
-  //                 </Button>
-  //               </VStack>
-  //             </Box>
-  //           </SimpleGrid>
-  //         </Box>
-  //       ) : (
-  //         <Box>
-  //           <Flex
-  //             direction={["column", null, "row"]}
-  //             justify="space-between"
-  //             align={["stretch", null, "center"]}
-  //             mb={4}
-  //             gap={4}
-  //           >
-  //             <Heading size={["sm", "md"]}>{currentRoom.name}</Heading>
-  //             <Flex gap={2} wrap="wrap" justify={["center", null, "flex-end"]}>
-  //               <Button
-  //                 size={["sm", "md"]}
-  //                 colorScheme="red"
-  //                 variant="outline"
-  //                 onClick={handleLeaveRoom}
-  //               >
-  //                 Sair da Sala
-  //               </Button>
-  //               <Button
-  //                 size={["sm", "md"]}
-  //                 colorScheme="red"
-  //                 onClick={handleLogout}
-  //               >
-  //                 Logout
-  //               </Button>
-  //             </Flex>
-  //           </Flex>
-
-  //           <GameBoard
-  //             onCellClick={handleCellClick}
-  //             onShipSelect={handleShipClick}
-  //             selectedAction={selectedAction}
-  //           />
-
-  //           <SimpleGrid columns={[2, 3, 4]} spacing={2} mt={4}>
-  //             <Button
-  //               size={["sm", "md"]}
-  //               colorScheme={selectedAction === "MOVE" ? "blue" : "gray"}
-  //               onClick={() => setSelectedAction("MOVE")}
-  //             >
-  //               Mover
-  //             </Button>
-  //             <Button
-  //               size={["sm", "md"]}
-  //               colorScheme={selectedAction === "ATTACK" ? "red" : "gray"}
-  //               onClick={() => setSelectedAction("ATTACK")}
-  //             >
-  //               Atacar
-  //             </Button>
-  //             <Button
-  //               size={["sm", "md"]}
-  //               colorScheme={selectedAction === "DONATE" ? "green" : "gray"}
-  //               onClick={() => setSelectedAction("DONATE")}
-  //             >
-  //               Doar
-  //             </Button>
-  //           </SimpleGrid>
-  //         </Box>
-  //       )}
-  //     </VStack>
-  //   </Container>
-  // )
 };

@@ -32,7 +32,16 @@ export const GameLogList: React.FC = () => {
         return `${timestamp} - Sistema distribuiu pontos: ${getPlayerName(log.playerId)} recebeu ${log.details?.points} PA`;
       
       case "DONATE":
-        return `${timestamp} - ${getPlayerName(log.playerId)} doou ${log.details?.points} PA para ${getPlayerName(log.targetId!)}`;
+        return `${timestamp} - ${getPlayerName(log.playerId)} doou 1 PA para ${getPlayerName(log.targetId!)}`;
+      
+      case "RECOVER":
+        return `${timestamp} - ${getPlayerName(log.playerId)} recuperou 1 PA`;
+      
+      case "DIE":
+        return `${timestamp} - ${getPlayerName(log.playerId)} morreu`;
+      
+      case "IMPROVE":
+        return `${timestamp} - ${getPlayerName(log.playerId)} aprimorou a nave`;
       
       default:
         return `${timestamp} - Ação desconhecida`;

@@ -9,7 +9,7 @@ export interface Player {
   votedFor?: string;
 }
 
-export type ShipType = 'fighter' | 'cruiser';
+export type ShipType = 'fighter' | 'cruiser' | 'destroyer' | 'scout';
 
 export interface Ship {
   id: string;
