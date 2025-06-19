@@ -99,9 +99,10 @@ export const GameBoard = ({
                 border="1px"
                 borderColor={
                   selectedShip &&
-                  Math.abs(x - selectedShip.position.x) +
-                    Math.abs(y - selectedShip.position.y) <=
-                    selectedShip.reach
+                  Math.max(
+                    Math.abs(x - selectedShip.position.x),
+                    Math.abs(y - selectedShip.position.y)
+                  ) <= selectedShip.reach
                     ? selectedShip.playerId === currentPlayer?.id
                       ? "blue.500"
                       : "red.500"
@@ -109,9 +110,10 @@ export const GameBoard = ({
                 }
                 borderWidth={
                   selectedShip &&
-                  Math.abs(x - selectedShip.position.x) +
-                    Math.abs(y - selectedShip.position.y) <=
-                    selectedShip.reach
+                  Math.max(
+                    Math.abs(x - selectedShip.position.x),
+                    Math.abs(y - selectedShip.position.y)
+                  ) <= selectedShip.reach
                     ? "2px"
                     : "1px"
                 }

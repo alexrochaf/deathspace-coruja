@@ -13,6 +13,11 @@ export const GameLogList: React.FC = () => {
     // Encontrar o nome do jogador no currentRoom
     const getPlayerName = (playerId: string) => {
       const player = currentRoom?.players.find(p => p.id === playerId);
+      if (!player) {
+        const ship = currentRoom?.ships.find((s) => s.id === playerId);
+        const ownerShip = currentRoom?.players.find(p => p.id === ship?.playerId);
+        return ownerShip?.name || `Jogador ${playerId.slice(0, 4)}`;
+      }
       return player?.name || `Jogador ${playerId.slice(0, 4)}`;
     };
     

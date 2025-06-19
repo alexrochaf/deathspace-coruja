@@ -174,7 +174,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
           
           // Filtrar apenas as salas onde o jogador está participando
           const playerRooms = rooms.filter(room => 
-            room.players.includes(currentPlayer)
+            room.players.some(player => player.id === currentPlayer.id)
           );
           
           setPlayerRooms(playerRooms);
@@ -289,7 +289,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       const roomData = roomDoc.data() as GameRoom;
       
       // Verificar se o jogador já está na sala
-      if (!roomData.players.includes(currentPlayer)) {
+      if (!roomData.players.some(player => player.id === currentPlayer.id)) {
         // Criar nova nave para o jogador se ele não tiver nave na sala
         const gridSize = roomData.gridSize;
         const occupiedPositions = [
@@ -371,6 +371,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   
   const createActionLog = (action: GameAction, roomData: GameRoom): GameLog => {
     const ship = roomData.ships.find((s) => s.id === action.shipId);
+    let targetId: string | null = null;
 
     // Garantir que todos os campos tenham valores válidos
     const details: Record<string, unknown> = {};
@@ -381,6 +382,21 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
 
     if (typeof action.target === "object" && action.target !== null) {
       details.position = action.target;
+      const targetPosition = action.target as Position;
+      const targetShip = roomData.ships.find(
+        (s) =>
+          s.position.x === targetPosition.x && s.position.y === targetPosition.y
+      );
+      const targetDebris = roomData.debris.find(
+        (d) =>
+          d.position.x === targetPosition.x && d.position.y === targetPosition.y
+      );
+
+      if (targetShip) {
+        targetId = targetShip.id;
+      } else if (targetDebris) {
+        targetId = targetDebris.id;
+      }
     }
 
     if (ship?.type) {
@@ -391,7 +407,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       timestamp: new Date(),
       action: action.type,
       playerId: action.playerId,
-      targetId: typeof action.target === "string" ? action.target : null,
+      targetId: targetId,
       details: Object.keys(details).length > 0 ? details : null,
     };
   };
@@ -440,8 +456,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
           // Verificar se o movimento está dentro do alcance da nave
           const xDiff = Math.abs(targetPos.x - ship.position.x);
           const yDiff = Math.abs(targetPos.y - ship.position.y);
-          const totalDistance = xDiff + yDiff;
-          if (totalDistance > ship.reach) throw new Error(`Movimento inválido: deve estar dentro de ${ship.reach} células de alcance`);
+          // Usar o maior valor entre xDiff e yDiff para criar um quadrado
+          const distance = Math.max(xDiff, yDiff);
+          if (distance > ship.reach) throw new Error(`Movimento inválido: deve estar dentro de ${ship.reach} células de alcance`);
           
           // Verificar se a posição está ocupada
           const isOccupied = roomData.ships.some(s => s.id !== ship.id && s.position.x === targetPos.x && s.position.y === targetPos.y) ||
@@ -462,7 +479,10 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
           const targetPosition = action.target as Position;
           
           // Verificar alcance do ataque
-          const attackDistance = Math.abs(targetPosition.x - ship.position.x) + Math.abs(targetPosition.y - ship.position.y);
+          const xDiff = Math.abs(targetPosition.x - ship.position.x);
+          const yDiff = Math.abs(targetPosition.y - ship.position.y);
+          // Usar o maior valor entre xDiff e yDiff para criar um quadrado
+          const attackDistance = Math.max(xDiff, yDiff);
           if (attackDistance > ship.reach) throw new Error('Alvo fora de alcance');
           
           // Procurar por naves ou detritos na posição alvo
@@ -504,20 +524,21 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
               }
             }
           } else if (targetDebris) {
-            const updatedDebris = [...roomData.debris];
-            const debrisIndex = updatedDebris.findIndex(d => d.id === targetDebris.id);
-            updatedDebris[debrisIndex] = {
-              ...targetDebris,
-              health: Math.max(0, targetDebris.health - 1)
-            };
+            throw new Error('Ataque não permitido em detritos');
+            // const updatedDebris = [...roomData.debris];
+            // const debrisIndex = updatedDebris.findIndex(d => d.id === targetDebris.id);
+            // updatedDebris[debrisIndex] = {
+            //   ...targetDebris,
+            //   health: Math.max(0, targetDebris.health - 1)
+            // };
             
-            if (updatedDebris[debrisIndex].health <= 0) {
-              updatedDebris.splice(debrisIndex, 1);
-            }
+            // if (updatedDebris[debrisIndex].health <= 0) {
+            //   updatedDebris.splice(debrisIndex, 1);
+            // }
             
-            await updateDoc(roomRef, {
-              debris: updatedDebris
-            });
+            // await updateDoc(roomRef, {
+            //   debris: updatedDebris
+            // });
           } else {
             throw new Error('Nenhum alvo encontrado na posição');
           }
