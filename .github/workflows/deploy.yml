@@ -1,5 +1,6 @@
 name: Deploy de Desenvolvimento no GitHub Pages
 
+# apply hugo or jerkyll
 on:
   push:
     branches:

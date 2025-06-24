@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { auth } from '../config/firebase';
-import { signInAnonymously, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -18,24 +18,6 @@ export const Auth = () => {
   const navigate = useNavigate();
   const toast = useToast();
 
-  const handleAnonymousLogin = async () => {
-    setLoading(true);
-    try {
-      await signInAnonymously(auth);
-      navigate('/game');
-    } catch (error) {
-      toast({
-        title: 'Erro ao fazer login',
-        description: 'Tente novamente mais tarde',
-        status: 'error',
-        duration: 3000,
-        isClosable: true,
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
@@ -43,6 +25,7 @@ export const Auth = () => {
       await signInWithPopup(auth, provider);
       navigate('/game');
     } catch (error) {
+      console.error(error);
       toast({
         title: 'Erro ao fazer login com Google',
         description: 'Tente novamente mais tarde',
@@ -56,30 +39,47 @@ export const Auth = () => {
   };
 
   return (
-    <Container maxW="container.sm" centerContent>
-      <Box textAlign="center" py={10}>
-        <Heading mb={6}>Bem-vindo ao Jogo</Heading>
-        <Text mb={8}>Escolha como você quer entrar:</Text>
-        <Stack spacing={4} direction="column" align="center">
-          <Button
-            w="full"
-            colorScheme="blue"
-            onClick={handleAnonymousLogin}
-            isLoading={loading}
-          >
-            Entrar Anonimamente
-          </Button>
-          <Button
-            w="full"
-            colorScheme="red"
-            leftIcon={<FaGoogle />}
-            onClick={handleGoogleLogin}
-            isLoading={loading}
-          >
-            Entrar com Google
-          </Button>
-        </Stack>
-      </Box>
-    </Container>
+    <Box
+      minH="100vh"
+      w="100%"
+      bgImage="url('https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?ixlib=rb-4.0.3')"
+      bgPosition="center"
+      bgRepeat="no-repeat"
+      bgSize="cover"
+    >
+      <Container maxW="container.sm" centerContent>
+        <Box 
+          textAlign="center" 
+          py={10} 
+          bg="rgba(0, 0, 0, 0.7)" 
+          borderRadius="xl"
+          p={8}
+          mt={20}
+          backdropFilter="blur(10px)"
+          boxShadow="xl"
+        >
+          <Heading mb={6} color="white" fontSize="4xl">
+            DEATH SPACE - CORUJA GAME
+          </Heading>
+          <Text color="gray.300" mb={8}>
+            Prepare-se para uma aventura épica nas estrelas!
+          </Text>
+          <Stack spacing={4} direction="column" align="center" w="full">
+            <Button
+              w="full"
+              colorScheme="red"
+              leftIcon={<FaGoogle />}
+              onClick={handleGoogleLogin}
+              isLoading={loading}
+              size="lg"
+              _hover={{ transform: 'scale(1.05)' }}
+              transition="all 0.2s"
+            >
+              Entrar com Google
+            </Button>
+          </Stack>
+        </Box>
+      </Container>
+    </Box>
   );
 };
