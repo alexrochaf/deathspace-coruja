@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Corpo principal da nave -->
+  <path d="M20 60 L50 20 L80 60 L50 45 Z" fill="#2d3748" stroke="#1a202c" stroke-width="2"/>
+  
+  <!-- Canhões laterais -->
+  <path d="M35 50 L30 55 L35 60" fill="#4a5568" stroke="#1a202c" stroke-width="2"/>
+  <path d="M65 50 L70 55 L65 60" fill="#4a5568" stroke="#1a202c" stroke-width="2"/>
+  
+  <!-- Detalhes da armadura -->
+  <path d="M40 45 L60 45" stroke="#4a5568" stroke-width="2" fill="none"/>
+  <path d="M45 35 L55 35" stroke="#4a5568" stroke-width="2" fill="none"/>
+  
+  <!-- Motor principal -->
+  <path d="M45 55 L55 55 L50 65 Z" fill="#fc8181" stroke="#1a202c" stroke-width="1"/>
+</svg>
