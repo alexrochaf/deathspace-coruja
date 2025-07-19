@@ -808,20 +808,23 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         : new Date(0);
 
       const timeDiff = now.getTime() - lastDistribution.getTime();
-      const hoursPassed = timeDiff / (1000 * 60 * 60);
+      const daysPassed = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
 
-      if (hoursPassed >= 24) {
+      if (daysPassed >= 1) {
         setIsDistributing(true);
 
-        // Primeiro atualizar o timestamp
+        const pointsToDistribute = daysPassed;
+        const newLastDistribution = new Date(lastDistribution.getTime() + daysPassed * 24 * 60 * 60 * 1000);
+
+        // Primeiro, atualiza o timestamp da última distribuição
         await updateDoc(roomRef, {
-          lastPointDistribution: serverTimestamp(),
+          lastPointDistribution: newLastDistribution,
         });
 
-        // Depois distribuir os pontos
+        // Depois, distribui os pontos
         const updatedShips = roomData.ships.map((ship) => ({
           ...ship,
-          actionPoints: ship.actionPoints + 1,
+          actionPoints: ship.actionPoints + pointsToDistribute,
         }));
 
         const pointDistributionLogs = updatedShips.map((ship) => ({
@@ -830,7 +833,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
           playerId: ship.playerId,
           targetId: null,
           details: {
-            points: 1,
+            points: pointsToDistribute,
             type: ship.type,
           },
         }));
@@ -840,7 +843,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
           logs: arrayUnion(...pointDistributionLogs),
         });
 
-        toast.success("Pontos de ação distribuídos para todas as naves");
+        toast.success(`${pointsToDistribute} ponto(s) de ação distribuído(s) para todas as naves.`);
       }
     } catch (error) {
       console.error("Erro ao distribuir pontos:", error);

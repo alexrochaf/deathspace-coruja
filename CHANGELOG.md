@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.0-alpha.2] - 2024-08-01
+
+### Fixed
+- A lógica de distribuição de pontos de ação foi corrigida para calcular e distribuir PAs para cada período de 24 horas decorrido, evitando distribuições incorretas e logs duplicados.
+
 ## [0.1.0-alpha.1] - 2024-08-01
 
 ### Added
