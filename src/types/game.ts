@@ -26,8 +26,11 @@ export interface Position {
   y: number;
 }
 
+export type PlayerActionType = 'MOVE' | 'ATTACK' | 'DONATE' | 'IMPROVE' | 'RECOVER';
+export type LogActionType = PlayerActionType | 'DESTROY' | 'TRANSFER_AP' | 'POINT_DISTRIBUTION';
+
 export type GameAction = {
-  type: 'MOVE' | 'ATTACK' | 'DONATE' | 'IMPROVE' | 'RECOVER';
+  type: PlayerActionType;
   shipId: string;
   playerId: string;
   target?: Position | string;
@@ -50,13 +53,15 @@ export interface ActionTimeWindow {
 
 export interface GameLog {
   timestamp: Date | Timestamp;
-  action: string;
+  action: LogActionType;
   playerId: string;
   targetId?: string | null;
   details?: {
     points?: number;
     position?: Position;
     type?: string;
+    fromShip?: string;
+    toShip?: string;
   } | null;
 }
 

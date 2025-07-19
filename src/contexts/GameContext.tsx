@@ -527,7 +527,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       const shipIndex = updatedShips.findIndex((s) => s.id === action.shipId);
 
       // Criar o log da ação antes de executá-la
-      const actionLog = createActionLog(action, roomData);
+      const logsToAdd: GameLog[] = [createActionLog(action, roomData)];
 
       // Atualizar o estado local imediatamente antes de executar a ação
       const updateLocalState = (ships: Ship[]) => {
@@ -603,6 +603,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
           );
 
           if (targetShip) {
+            if(targetShip.health <= 0) throw new Error("Nave já destruída");
+
             const targetIndex = updatedShips.findIndex(
               (s) => s.id === targetShip.id
             );
@@ -613,8 +615,30 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
 
             // Se a nave foi destruída
             if (updatedShips[targetIndex].health <= 0) {
-              // Transferir PA para o atacante
-              ship.actionPoints += targetShip.actionPoints;
+              const destroyLog = logsToAdd[0];
+              // Adiciona log de destruição
+              destroyLog.action = "DESTROY";
+              destroyLog.targetId = targetShip.id;
+
+              // Se o alvo destruído tiver pontos de ação, transfira-os
+              if (targetShip.actionPoints > 0) {
+                const pointsTransferred = targetShip.actionPoints;
+                updatedShips[shipIndex].actionPoints += pointsTransferred;
+
+                // Adicionar log de transferência de PA
+                const transferLog: GameLog = {
+                  timestamp: new Date(),
+                  action: "TRANSFER_AP",
+                  playerId: currentPlayer.id,
+                  targetId: targetShip.playerId,
+                  details: {
+                    points: pointsTransferred,
+                    fromShip: targetShip.id,
+                    toShip: ship.id,
+                  },
+                };
+                logsToAdd.push(transferLog);
+              }
 
               // Adicionar jogador ao conselho se for sua última nave
               const targetPlayer = roomData.players.find(
@@ -737,7 +761,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       // Atualizar a sala com as novas informações
       await updateDoc(roomRef, {
         ships: updatedShips,
-        logs: arrayUnion(actionLog),
+        logs: arrayUnion(...logsToAdd),
       });
 
       // Verificar condições de fim de jogo após cada ação

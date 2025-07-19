@@ -37,11 +37,14 @@ export const GameLogList: React.FC = () => {
       case "RECOVER":
         return `${timestamp} - ${getPlayerName(log.playerId)} recuperou 1 PA`;
       
-      case "DIE":
-        return `${timestamp} - ${getPlayerName(log.playerId)} morreu`;
-      
       case "IMPROVE":
         return `${timestamp} - ${getPlayerName(log.playerId)} aprimorou a nave`;
+      
+      case "DESTROY":
+        return `${timestamp} - ${getPlayerName(log.playerId)} destruiu a nave de ${getPlayerName(log.targetId!)}`;
+
+      case "TRANSFER_AP":
+        return `${timestamp} - ${getPlayerName(log.playerId)} recebeu ${log.details?.points} PA da nave destruída de ${getPlayerName(log.targetId!)}`;
       
       default:
         return `${timestamp} - Ação desconhecida`;
