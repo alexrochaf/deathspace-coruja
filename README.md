@@ -10,47 +10,42 @@ DEATHSPACE é um jogo de estratégia multijogador massivo de longo prazo onde jo
 - Jogadores começam em posições aleatórias
 - Cada nave espacial inicia com:
   - 3 Pontos de Vida (PV)
-  - 2 Pontos de Mira (PM)
+  - 1 Ponto de Ação (PA)
+  - 2 de Alcance para ações
 
 ### Recursos
-- Jogadores recebem 1 Ponto de Ação (PA) a cada 24 horas
+- Jogadores recebem 1 Ponto de Ação (PA) a cada 24 horas (Mecânica a ser implementada)
 - PAs podem ser acumulados
-- Alcance inicial de 2 casas para ações de ataque e negociação
 
 ### Ações Disponíveis
 
-| Ação | Descrição | Custo |
-|------|-----------|-------|
-| MOVER | Move a nave para uma casa adjacente desocupada | 1 PA |
-| ATACAR | Atira em um alvo no alcance, causando 1 PV de dano | 1 PA |
-| NEGOCIAR | Transfere PA(s) para outro jogador no alcance | - |
-| RECUPERAR | Recupera 1 PV (máximo de 3 PV) | 3 PA |
-| APRIMORAR | Aumenta PM em 1 casa em cada direção permanentemente | 3 PA |
+| Ação      | Descrição                                       | Custo |
+|-----------|-------------------------------------------------|-------|
+| MOVER     | Move a nave para uma casa dentro do alcance     | 1 PA  |
+| ATACAR    | Atira em um alvo no alcance, causando 1 de dano | 1 PA  |
+| DOAR      | Transfere 1 PA para outro jogador no alcance    | 1 PA  |
+| RECUPERAR | Recupera 1 PV (máximo de 3 PV)                  | 3 PA  |
+| APRIMORAR | Aumenta o alcance em 1 permanentemente          | 3 PA  |
 
 ### Sistema de Morte
-- Jogador morre ao atingir 0 PV
+- Jogador morre ao ter seus PVs zerados.
 - Ao morrer:
-  - Seus PAs são transferidos para quem o eliminou
-  - Permanece no mapa como obstáculo
-  - Torna-se membro do Conselho
+  - Seus PAs são transferidos para quem o eliminou.
+  - Sua nave se torna um destroço no mapa.
+  - O jogador se torna membro do Conselho.
 
 ### Conselho
-- Composto por jogadores eliminados
-- Realiza votação diária
-- Jogadores vivos com 3+ votos recebem 1 PA extra
-- Primeiro jogador eliminado tem:
-  - Voto triplo até haver 2 membros no Conselho
-  - Voto duplo até haver 3 membros
+- Composto por jogadores eliminados.
+- Realiza votação diária. Jogadores vivos com 3+ votos recebem 1 PA extra.
+- O primeiro jogador a ser eliminado tem voto com peso 3. Os demais têm peso 1.
 
 ### Condições de Vitória
-- Jogo termina quando restam 4 jogadores
-- Posições (1º, 2º e 3º) definidas por consenso
-- Se não houver consenso:
-  - Inicia-se a fase de Morte Súbita
-  - PAs recebidos são dobrados
+- O jogo termina quando restam 4 jogadores.
+- As posições (1º, 2º e 3º) são definidas por consenso entre os finalistas.
+- Se não houver consenso, inicia-se a fase de Morte Súbita e os PAs recebidos são dobrados.
 
 ## Versão
-v2.4
+v0.1.0-alpha.2
 
 ---
 

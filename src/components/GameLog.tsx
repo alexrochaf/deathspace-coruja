@@ -2,13 +2,15 @@ import { Box, VStack, Text } from "@chakra-ui/react";
 import type { GameLog } from "../types/game";
 import { useGame } from "../contexts/GameContext";
 import { Timestamp } from "firebase/firestore";
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 export const GameLogList: React.FC = () => {
   const { currentRoom } = useGame();
 
   const formatLogMessage = (log: GameLog): string => {
     const date = log.timestamp instanceof Timestamp ? log.timestamp.toDate() : new Date(log.timestamp);
-    const timestamp = date.toLocaleTimeString();
+    const timestamp = format(date, "EEEE, d/MM 'às' HH:mm", { locale: ptBR });
     
     // Encontrar o nome do jogador no currentRoom
     const getPlayerName = (playerId: string) => {
@@ -29,6 +31,9 @@ export const GameLogList: React.FC = () => {
         return `${timestamp} - Nave de ${getPlayerName(log.playerId)} atacou a nave de ${getPlayerName(log.targetId!)}`;
       
       case "POINT_DISTRIBUTION":
+        if (log.details?.type === 'council_vote') {
+          return `${timestamp} - ${getPlayerName(log.playerId)} recebeu 1 PA por votação do Conselho`;
+        }
         return `${timestamp} - Sistema distribuiu pontos: ${getPlayerName(log.playerId)} recebeu ${log.details?.points} PA`;
       
       case "DONATE":

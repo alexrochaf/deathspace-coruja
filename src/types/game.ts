@@ -1,6 +1,7 @@
 export interface Player {
   id: string;
   name: string;
+  photoURL?: string;
   actionPoints: number;
   ships: Ship[];
   lastPointGain: Date;
@@ -65,6 +66,14 @@ export interface GameLog {
   } | null;
 }
 
+export interface ChatMessage {
+  id: string;
+  playerId: string;
+  playerName: string;
+  message: string;
+  timestamp: Date | Timestamp;
+}
+
 import { Timestamp } from 'firebase/firestore';
 
 export interface GameRoom {
@@ -83,7 +92,7 @@ export interface GameRoom {
   actionTimeWindows: ActionTimeWindow[];
   lastPointDistribution?: Timestamp;
   council: {
-    members: Player[];
+    memberIds: string[];
     votes: {
       playerId: string;
       votedFor: string;
@@ -92,4 +101,6 @@ export interface GameRoom {
     lastVoteTime: Date;
   };
   logs: GameLog[];
+  roomChat?: ChatMessage[];
+  councilChat?: ChatMessage[];
 }

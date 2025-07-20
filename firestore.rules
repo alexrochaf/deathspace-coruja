@@ -1,8 +1,48 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    function isPlayer(roomId) {
+      return exists(/databases/$(database)/documents/rooms/$(roomId)/players/$(request.auth.uid));
+    }
+
+    function isJoining(roomId) {
+      let roomBefore = get(/databases/$(database)/documents/rooms/$(roomId)).data;
+      let roomAfter = request.resource.data;
+      let isNewPlayer = request.auth.uid in roomAfter.playerIds && !(request.auth.uid in roomBefore.playerIds);
+      
+      return roomAfter.players.size() == roomBefore.players.size() + 1 && isNewPlayer;
+    }
+
+    function isCouncilMember(roomId) {
+      let roomPath = /databases/$(database)/documents/rooms/$(roomId);
+      let room = get(roomPath);
+      let userId = request.auth.uid;
+      
+      return room.data.council.memberIds.hasAll([userId]);
+    }
+
     match /rooms/{roomId} {
-      allow read, write: if request.auth != null;
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null && (isPlayer(roomId) || isJoining(roomId));
+      allow delete: if false;
+
+      match /players/{playerId} {
+        allow read: if true;
+        allow write: if request.auth != null; // Temporarily relaxed for debugging
+      }
+
+      match /roomChat/{messageId} {
+        allow read: if isPlayer(roomId);
+        allow create: if isPlayer(roomId);
+      }
+
+      match /councilChat/{messageId} {
+        allow read: if isCouncilMember(roomId);
+        allow create: if isCouncilMember(roomId);
+      }
     }
   }
 }

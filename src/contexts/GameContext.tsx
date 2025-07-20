@@ -16,6 +16,10 @@ import {
   updateDoc,
   serverTimestamp,
   arrayUnion,
+  writeBatch,
+  query,
+  where,
+  orderBy,
 } from "firebase/firestore";
 import type {
   GameRoom,
@@ -28,6 +32,7 @@ import type {
   DebrisType,
   ActionTimeWindow,
   GameLog,
+  ChatMessage,
 } from "../types/game";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -46,6 +51,8 @@ interface GameContextType {
   joinRoom: (roomId: string, shipType: ShipType) => Promise<void>;
   performAction: (action: GameAction) => Promise<void>;
   voteInCouncil: (targetPlayerId: string) => Promise<void>;
+  sendRoomMessage: (message: string) => Promise<void>;
+  sendCouncilMessage: (message: string) => Promise<void>;
   loading: boolean;
   error: string | null;
 }
@@ -99,8 +106,11 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    // Verificar condição de Morte Súbita (todos votaram)
-    if (roomData.council?.votes.length === roomData.council?.members.length) {
+    // Processar votos do conselho quando todos votaram
+    if (
+      roomData.council?.votes.length === roomData.council?.memberIds.length &&
+      roomData.council.memberIds.length > 0
+    ) {
       const voteCount = new Map<string, number>();
 
       // Contar votos ponderados
@@ -109,38 +119,53 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         voteCount.set(vote.votedFor, currentCount + vote.voteWeight);
       });
 
-      // Encontrar jogador com mais votos
-      let maxVotes = 0;
-      let mostVotedPlayer = "";
+      const updatedShips = [...roomData.ships];
+      const logsToAdd: GameLog[] = [];
+      let updated = false;
+
+      // Dar 1 PA extra para jogadores com 3+ votos
       voteCount.forEach((votes, playerId) => {
-        if (votes > maxVotes) {
-          maxVotes = votes;
-          mostVotedPlayer = playerId;
+        if (votes >= 3) {
+          const shipIndex = updatedShips.findIndex(
+            (s) => s.playerId === playerId && s.health > 0
+          );
+          if (shipIndex !== -1) {
+            updatedShips[shipIndex].actionPoints += 1;
+            updated = true;
+            // Adicionar log
+            logsToAdd.push({
+              action: "POINT_DISTRIBUTION",
+              playerId: playerId,
+              timestamp: new Date(),
+              details: {
+                points: 1,
+                type: "council_vote",
+              },
+            });
+          }
         }
       });
 
-      // Eliminar jogador mais votado
-      if (mostVotedPlayer) {
-        const updatedShips = roomData.ships.map((ship) =>
-          ship.playerId === mostVotedPlayer ? { ...ship, health: 0 } : ship
-        );
+      const updatedLogs = [...(roomData.logs || []), ...logsToAdd];
 
-        await updateDoc(doc(db, "rooms", roomData.id!), {
-          ships: updatedShips,
-          "council.votes": [],
-          "council.lastVoteTime": new Date(),
-        });
-      }
+      // Atualizar naves e limpar votos
+      await updateDoc(doc(db, "rooms", roomData.id!), {
+        ships: updated ? updatedShips : roomData.ships,
+        logs: updatedLogs,
+        "council.votes": [],
+        "council.lastVoteTime": new Date(),
+      });
     }
   };
 
   const voteInCouncil = async (targetPlayerId: string) => {
     if (!currentRoom || !currentPlayer) return;
 
-    // Verificar se o jogador está no conselho
-    if (!currentRoom.council?.members.includes(currentPlayer)) {
-      toast.error("Apenas membros do Conselho podem votar");
-      return;
+    const isCouncilMember = currentRoom.council?.memberIds.includes(currentPlayer.id);
+
+    if (!isCouncilMember) {
+        toast.error("Apenas membros do Conselho podem votar");
+        return;
     }
 
     // Verificar se já votou
@@ -152,7 +177,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     }
 
     // Calcular peso do voto (primeiro a morrer tem peso 3)
-    const voteWeight = currentRoom.council.members[0] === currentPlayer ? 3 : 1;
+    const voteWeight = currentRoom.council.memberIds[0] === currentPlayer.id ? 3 : 1;
 
     const updatedVotes = [
       ...currentRoom.council.votes,
@@ -162,6 +187,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     await updateDoc(doc(db, "rooms", currentRoom.id!), {
       "council.votes": updatedVotes,
     });
+
+    toast.success("Voto computado com sucesso!");
 
     // Verificar condições de fim de jogo após o voto
     await checkGameEnd({
@@ -176,12 +203,53 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+
+
+  const sendRoomMessage = async (message: string) => {
+    if (!currentRoom || !currentPlayer) return;
+
+    try {
+      await addDoc(collection(db, "rooms", currentRoom.id!, "roomChat"), {
+        message,
+        playerId: currentPlayer.id,
+        playerName: currentPlayer.name,
+        timestamp: serverTimestamp(),
+      });
+    } catch (err) {
+      console.error("Error sending room message: ", err);
+      toast.error("Erro ao enviar mensagem na sala.");
+    }
+  };
+
+  const sendCouncilMessage = async (message: string) => {
+    if (!currentRoom || !currentPlayer) return;
+
+    const isCouncilMember = currentRoom.council?.memberIds.includes(currentPlayer.id);
+    if (!isCouncilMember) {
+        toast.error("Apenas membros do conselho podem enviar mensagens aqui.");
+        return;
+    }
+
+    try {
+      await addDoc(collection(db, "rooms", currentRoom.id!, "councilChat"), {
+        message,
+        playerId: currentPlayer.id,
+        playerName: currentPlayer.name,
+        timestamp: serverTimestamp(),
+      });
+    } catch (err) {
+      console.error("Error sending council message: ", err);
+      toast.error("Erro ao enviar mensagem do conselho.");
+    }
+  };
+
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
         setCurrentPlayer({
           id: user.uid,
-          name: user.displayName || "Jogador Anônimo",
+          name: user.displayName || "Player",
+          photoURL: user.photoURL || undefined,
           actionPoints: 0,
           ships: [],
           lastPointGain: new Date(),
@@ -198,8 +266,10 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (currentPlayer) {
+      const q = query(collection(db, "rooms"), where("playerIds", "array-contains", currentPlayer.id));
+
       const unsubscribeRooms = onSnapshot(
-        collection(db, "rooms"),
+        q,
         (snapshot) => {
           const rooms = snapshot.docs.map((doc) => ({
             ...doc.data(),
@@ -208,18 +278,15 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
             ships: doc.data().ships || [],
           })) as GameRoom[];
 
-          // Filtrar apenas as salas onde o jogador está participando
-          const playerRooms = rooms.filter((room) =>
-            room.players.some((player) => player.id === currentPlayer.id)
-          );
-
-          setPlayerRooms(playerRooms);
+          setPlayerRooms(rooms);
         }
       );
 
       return () => unsubscribeRooms();
     }
   }, [currentPlayer]);
+
+
 
   const timeWindows = [{ start: "00:00", end: "23:59" }];
 
@@ -314,9 +381,13 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         debris.push(createDebris(debrisType, debrisPosition));
       }
 
-      const roomRef = await addDoc(collection(db, "rooms"), {
+      const batch = writeBatch(db);
+
+      const roomRef = doc(collection(db, "rooms"));
+      batch.set(roomRef, {
         name,
-        players: [currentPlayer],
+        players: [{ id: currentPlayer.id, name: currentPlayer.name }],
+        playerIds: [currentPlayer.id],
         gridSize,
         status: "waiting",
         createdAt: serverTimestamp(),
@@ -324,7 +395,17 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         ships: [newShip],
         debris,
         actionTimeWindows: timeWindows,
+        council: {
+          memberIds: [],
+          votes: [],
+          lastVoteTime: serverTimestamp(),
+        },
       });
+
+      const playerDocRef = doc(db, "rooms", roomRef.id, "players", currentPlayer.id);
+      batch.set(playerDocRef, { id: currentPlayer.id, name: currentPlayer.name, joinedAt: serverTimestamp() });
+
+      await batch.commit();
 
       setCurrentRoom({
         id: roomRef.id,
@@ -338,11 +419,13 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         ships: [newShip],
         actionTimeWindows,
         council: {
-          members: [],
+          memberIds: [],
           votes: [],
           lastVoteTime: new Date(),
         },
         logs: [],
+        roomChat: [],
+        councilChat: [],
       });
     } catch (error) {
       toast.error(
@@ -353,6 +436,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
     }
   };
+
+
 
   const joinRoom = async (roomId: string, shipType?: ShipType) => {
     try {
@@ -399,10 +484,18 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
           ships: [...(roomData.ships || []), newShip],
         };
 
-        await updateDoc(roomRef, {
-          players: updatedRoom.players,
-          ships: updatedRoom.ships,
+        const batch = writeBatch(db);
+
+        batch.update(roomRef, {
+          players: arrayUnion({ id: currentPlayer.id, name: currentPlayer.name }),
+          playerIds: arrayUnion(currentPlayer.id),
+          ships: arrayUnion(newShip),
         });
+
+        const playerDocRef = doc(db, "rooms", roomId, "players", currentPlayer.id);
+        batch.set(playerDocRef, { id: currentPlayer.id, name: currentPlayer.name, joinedAt: serverTimestamp() });
+
+        await batch.commit();
 
         // Atualizar o estado local imediatamente
         setCurrentRoom({
@@ -415,18 +508,27 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         await updateDoc(doc(db, "players", currentPlayer.id), {
           ships: arrayUnion(newShip),
         });
+      } else {
+        // Se o jogador já está na sala, apenas carrega os dados da sala
+        setCurrentRoom({
+          ...roomData,
+          id: roomRef.id,
+          createdAt: roomData.createdAt,
+        });
       }
 
       // Configurar listener para atualizações da sala
       const unsubscribe = onSnapshot(roomRef, (snapshot) => {
         if (snapshot.exists()) {
           const updatedRoomData = snapshot.data() as GameRoom;
-          setCurrentRoom({
+          setCurrentRoom(prev => ({
             ...updatedRoomData,
             id: snapshot.id,
             createdAt: updatedRoomData.createdAt,
             ships: updatedRoomData.ships || [],
-          });
+            roomChat: prev?.roomChat || [],
+            councilChat: prev?.councilChat || [],
+          }));
         } else {
           setError("Room was deleted");
           setCurrentRoom(null);
@@ -653,21 +755,10 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
               );
 
               if (!hasOtherShips) {
-                const updatedRoom = {
-                  ...roomData,
-                  council: roomData.council || {
-                    members: [],
-                    votes: [],
-                    lastVoteTime: new Date(),
-                  },
-                };
-
-                if (!updatedRoom.council.members.includes(targetPlayer)) {
-                  updatedRoom.council.members.push(targetPlayer);
-                  await updateDoc(roomRef, {
-                    council: updatedRoom.council,
-                  });
-                }
+                // Adicionar jogador ao conselho atomicamente, o arrayUnion previne duplicatas
+                await updateDoc(roomRef, {
+                  "council.memberIds": arrayUnion(targetPlayer.id),
+                });
               }
             }
           } else if (targetDebris) {
@@ -779,16 +870,37 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (!currentRoom?.id) return;
 
-    const unsubscribe = onSnapshot(doc(db, "rooms", currentRoom.id), (doc) => {
-      if (doc.exists()) {
-        setCurrentRoom({
-          ...(doc.data() as GameRoom),
-          id: doc.id,
-        });
+    const roomRef = doc(db, "rooms", currentRoom.id);
+    const unsubscribeRoom = onSnapshot(roomRef, (snapshot) => {
+      if (snapshot.exists()) {
+        setCurrentRoom(prev => ({
+          ...(snapshot.data() as GameRoom),
+          id: snapshot.id,
+          roomChat: prev?.roomChat || [],
+          councilChat: prev?.councilChat || [],
+        }));
       }
     });
 
-    return () => unsubscribe();
+    const roomChatRef = collection(db, "rooms", currentRoom.id, "roomChat");
+    const qRoomChat = query(roomChatRef, orderBy("timestamp"));
+    const unsubscribeRoomChat = onSnapshot(qRoomChat, (snapshot) => {
+      const messages = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as ChatMessage[];
+      setCurrentRoom(prev => prev ? { ...prev, roomChat: messages } : null);
+    });
+
+    const councilChatRef = collection(db, "rooms", currentRoom.id, "councilChat");
+    const qCouncilChat = query(councilChatRef, orderBy("timestamp"));
+    const unsubscribeCouncilChat = onSnapshot(qCouncilChat, (snapshot) => {
+      const messages = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as ChatMessage[];
+      setCurrentRoom(prev => prev ? { ...prev, councilChat: messages } : null);
+    });
+
+    return () => {
+      unsubscribeRoom();
+      unsubscribeRoomChat();
+      unsubscribeCouncilChat();
+    };
   }, [currentRoom?.id]);
 
   const [isDistributing, setIsDistributing] = useState(false);
@@ -872,6 +984,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         joinRoom,
         performAction,
         voteInCouncil,
+        sendRoomMessage,
+        sendCouncilMessage,
         loading,
         error,
       }}
