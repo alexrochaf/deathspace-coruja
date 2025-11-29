@@ -1,7 +1,7 @@
 import { Box, VStack, Text } from "@chakra-ui/react";
 import type { GameLog } from "../types/game";
 import { useGame } from "../contexts/GameContext";
-import { Timestamp } from "firebase/firestore";
+import type { Timestamp } from "firebase/firestore";
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 

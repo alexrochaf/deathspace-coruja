@@ -11,19 +11,27 @@ import {
   Flex,
   Avatar,
   HStack,
+  Alert,
+  AlertIcon,
+  AlertTitle,
+  AlertDescription,
 } from "@chakra-ui/react";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { GameBoard } from '../components/GameBoard';
 import { useGame } from '../contexts/GameContext';
 import type { GameAction, Position, ShipType, Ship } from '../types/game';
-import { auth } from '../config/firebase';
+import { signOut } from '../config/supabase';
 import { PlayerInfo } from "../components/game/PlayerInfo";
 import { GameControls } from "../components/game/GameControls";
 import { Sidebar } from "../components/game/Sidebar";
 import { RoomSetup } from "../components/game/RoomSetup";
 import { ShipSelectionModal } from "../components/game/ShipSelectionModal";
+import { MunchkinGame } from "../components/munchkin/MunchkinGame";
 
 export const Game: React.FC = () => {
+  const { gameType } = useParams<{ gameType: string }>();
+  const navigate = useNavigate();
   const {
     currentRoom,
     currentPlayer,
@@ -44,6 +52,39 @@ export const Game: React.FC = () => {
   const [selectedShipInfo, setSelectedShipInfo] = useState<Ship | null>(null);
   const toast = useToast();
   const isCouncilMember = currentRoom?.council?.memberIds.includes(currentPlayer?.id ?? '');
+
+  // Verificar se o tipo de jogo é válido
+  useEffect(() => {
+    if (!gameType || !['death_space', 'munchkin'].includes(gameType)) {
+      navigate('/platform');
+    }
+  }, [gameType, navigate]);
+
+  // Renderizar o jogo apropriado baseado no tipo
+  if (gameType === 'munchkin') {
+    return <MunchkinGame />;
+  }
+
+  // Se não for Death Space nem Munchkin, mostrar mensagem
+  if (gameType !== 'death_space') {
+    return (
+      <Container maxW="container.md" py={10}>
+        <Alert status="info">
+          <AlertIcon />
+          <Box>
+            <AlertTitle>Jogo em desenvolvimento!</AlertTitle>
+            <AlertDescription>
+              O jogo {gameType} ainda está em desenvolvimento.
+              Por enquanto, apenas Death Space e Munchkin estão disponíveis.
+            </AlertDescription>
+          </Box>
+        </Alert>
+        <Button mt={4} onClick={() => navigate('/platform')}>
+          Voltar à Plataforma
+        </Button>
+      </Container>
+    );
+  }
 
 
   const handleCreateRoom = async () => {
@@ -252,8 +293,8 @@ export const Game: React.FC = () => {
       setCurrentRoom(null);
       setSelectedShipInfo(null);
       setSelectedAction(null);
-      await auth.signOut();
-      window.location.href = "/";
+      await signOut();
+      navigate('/');
       toast({
         title: "Logout realizado",
         status: "success",
@@ -269,6 +310,13 @@ export const Game: React.FC = () => {
     }
   };
 
+  const handleBackToPlatform = () => {
+    setCurrentRoom(null);
+    setSelectedShipInfo(null);
+    setSelectedAction(null);
+    navigate('/platform');
+  };
+
 
 
   return (
@@ -279,6 +327,9 @@ export const Game: React.FC = () => {
           <Flex justify="space-between" align="center">
             <Heading size="md">Death Space</Heading>
             <HStack spacing={4}>
+              <Button size="sm" variant="ghost" onClick={handleBackToPlatform}>
+                ← Plataforma
+              </Button>
               <Avatar
                 size="sm"
                 name={currentPlayer?.name}

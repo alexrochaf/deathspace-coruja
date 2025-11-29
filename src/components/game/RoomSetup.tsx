@@ -1,4 +1,4 @@
-import { Container, VStack, Heading, FormControl, FormLabel, Input, Button, Text, useToast, HStack, Box, List, ListItem } from "@chakra-ui/react";
+import { Container, VStack, Heading, FormControl, FormLabel, Input, Button, Text, HStack, Box, List, ListItem } from "@chakra-ui/react";
 import type { GameRoom } from "../../types/game";
 
 type RoomSetupProps = {

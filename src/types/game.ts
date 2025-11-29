@@ -74,7 +74,7 @@ export interface ChatMessage {
   timestamp: Date | Timestamp;
 }
 
-import { Timestamp } from 'firebase/firestore';
+import type { Timestamp } from 'firebase/firestore';
 
 export interface GameRoom {
   id?: string;

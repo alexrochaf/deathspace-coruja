@@ -1,0 +1,225 @@
+/* Munchkin Game Animations */
+
+@keyframes dungeonGlow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes cardHover {
+  0% {
+    transform: translateY(0) scale(1);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  }
+  100% {
+    transform: translateY(-8px) scale(1.05);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
+  }
+}
+
+@keyframes plaqueGlow {
+  0% {
+    box-shadow: inset 0 2px 10px rgba(255, 215, 0, 0.2), 0 4px 20px rgba(0, 0, 0, 0.5);
+  }
+  50% {
+    box-shadow: inset 0 2px 15px rgba(255, 215, 0, 0.4), 0 6px 30px rgba(255, 215, 0, 0.3);
+  }
+  100% {
+    box-shadow: inset 0 2px 10px rgba(255, 215, 0, 0.2), 0 4px 20px rgba(0, 0, 0, 0.5);
+  }
+}
+
+@keyframes combatPulse {
+  0% {
+    border-color: #e53e3e;
+    box-shadow: 0 0 0 0 rgba(229, 62, 62, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(229, 62, 62, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(229, 62, 62, 0);
+  }
+}
+
+@keyframes treasureShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes doorCreak {
+  0% {
+    transform: rotateY(0deg);
+  }
+  25% {
+    transform: rotateY(-5deg);
+  }
+  75% {
+    transform: rotateY(5deg);
+  }
+  100% {
+    transform: rotateY(0deg);
+  }
+}
+
+@keyframes levelUp {
+  0% {
+    transform: scale(1);
+    color: #ffd700;
+  }
+  50% {
+    transform: scale(1.2);
+    color: #ffff00;
+    text-shadow: 0 0 20px #ffd700;
+  }
+  100% {
+    transform: scale(1);
+    color: #ffd700;
+  }
+}
+
+@keyframes floatCard {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* Utility classes */
+.card-hover {
+  transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+  animation: cardHover 0.3s ease forwards;
+}
+
+.active-player-plaque {
+  animation: plaqueGlow 2s ease-in-out infinite;
+}
+
+.combat-area {
+  animation: combatPulse 2s infinite;
+}
+
+.treasure-card {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 215, 0, 0.2),
+    transparent
+  );
+  background-size: 200% 100%;
+  animation: treasureShimmer 3s ease-in-out infinite;
+}
+
+.door-card {
+  transition: transform 0.3s ease;
+}
+
+.door-card:hover {
+  animation: doorCreak 0.6s ease-in-out;
+}
+
+.level-indicator {
+  transition: all 0.3s ease;
+}
+
+.level-up {
+  animation: levelUp 1s ease-in-out;
+}
+
+.floating-card {
+  animation: floatCard 3s ease-in-out infinite;
+}
+
+/* Animação de brilho para cartas selecionadas */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.8), 0 0 40px rgba(255, 215, 0, 0.4);
+  }
+  100% {
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+  }
+}
+
+/* Animação de brilho para cartas em hover */
+@keyframes cardGlow {
+  0% {
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 0.6;
+  }
+}
+
+/* Melhorias para cartas cartunescas */
+.munchkin-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.munchkin-card:hover {
+  transform: scale(1.1) translateY(-8px) rotateY(5deg);
+  z-index: 999;
+}
+
+/* Efeitos específicos por tipo de carta */
+.munchkin-card.door {
+  filter: drop-shadow(0 4px 8px rgba(139, 69, 19, 0.3));
+}
+
+.munchkin-card.treasure {
+  filter: drop-shadow(0 4px 8px rgba(255, 215, 0, 0.3));
+}
+
+.munchkin-card.monster {
+  filter: drop-shadow(0 4px 8px rgba(220, 20, 60, 0.3));
+}
+
+.munchkin-card.curse {
+  filter: drop-shadow(0 4px 8px rgba(75, 0, 130, 0.3));
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  @keyframes cardHover {
+    0% {
+      transform: translateY(0) scale(1);
+    }
+    100% {
+      transform: translateY(-4px) scale(1.02);
+    }
+  }
+}
+
+/* Dark theme enhancements */
+.dungeon-theme {
+  --primary-glow: rgba(255, 215, 0, 0.3);
+  --secondary-glow: rgba(139, 69, 19, 0.2);
+  --danger-glow: rgba(229, 62, 62, 0.3);
+  --success-glow: rgba(34, 139, 34, 0.3);
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
